@@ -1,0 +1,14 @@
+[profile.default]
+src = "examples"
+test = "examples"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.24"
+optimizer = true
+optimizer_runs = 200
+match_path = "examples/**/*.t.sol"
+
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = true

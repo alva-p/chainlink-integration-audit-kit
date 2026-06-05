@@ -1,0 +1,39 @@
+{
+  "name": "chainlink-integration-audit-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Security CLI for detecting potential Chainlink integration risks in Solidity repositories.",
+  "license": "MIT",
+  "keywords": [
+    "chainlink",
+    "solidity",
+    "security",
+    "audit",
+    "web3",
+    "cli",
+    "foundry",
+    "ccip",
+    "vrf",
+    "automation",
+    "oracle"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alva/chainlink-integration-audit-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alva/chainlink-integration-audit-kit/issues"
+  },
+  "homepage": "https://github.com/alva/chainlink-integration-audit-kit#readme",
+  "workspaces": [
+    "packages/cli"
+  ],
+  "scripts": {
+    "build": "npm -w packages/cli run build",
+    "test": "npm -w packages/cli test",
+    "scan:examples": "npm -w packages/cli run build && node packages/cli/dist/index.js scan examples"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
