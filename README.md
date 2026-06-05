@@ -14,6 +14,7 @@ chainlink-audit init
 chainlink-audit scan .
 chainlink-audit scan . --format markdown --out chainlink-report.md
 chainlink-audit scan . --format html --out chainlink-report.html
+chainlink-audit scan . --format sarif --out chainlink-report.sarif
 ```
 
 The CLI detects likely Chainlink product usage and reports potential integration risks. Findings are heuristic leads for manual review, not confirmed vulnerabilities.
@@ -25,9 +26,9 @@ npm install -g chainlink-audit
 chainlink-audit version
 ```
 
-Published package: [`chainlink-audit@0.1.0`](https://www.npmjs.com/package/chainlink-audit)
+Published package: [`chainlink-audit`](https://www.npmjs.com/package/chainlink-audit)
 
-GitHub release: [`v0.1.0`](https://github.com/alva-p/chainlink-integration-audit-kit/releases/tag/v0.1.0)
+GitHub releases: [chainlink-integration-audit-kit/releases](https://github.com/alva-p/chainlink-integration-audit-kit/releases)
 
 ## What It Detects
 
@@ -45,14 +46,14 @@ git clone https://github.com/alva-p/chainlink-integration-audit-kit.git
 cd chainlink-integration-audit-kit
 npm install
 npm run build
-npm exec -- chainlink-audit version
+node packages/cli/dist/index.js version
 ```
 
 During local development, run:
 
 ```bash
-npm exec -- chainlink-audit init
-npm exec -- chainlink-audit scan examples
+node packages/cli/dist/index.js init
+node packages/cli/dist/index.js scan examples
 ```
 
 ## Usage
@@ -63,6 +64,7 @@ chainlink-audit scan <path> --format text
 chainlink-audit scan <path> --format json
 chainlink-audit scan <path> --format markdown --out chainlink-report.md
 chainlink-audit scan <path> --format html --out chainlink-report.html
+chainlink-audit scan <path> --format sarif --out chainlink-report.sarif
 chainlink-audit scan <path> --min-severity medium
 chainlink-audit init
 chainlink-audit rules
@@ -72,10 +74,11 @@ chainlink-audit version
 Local repository examples:
 
 ```bash
-npm exec -- chainlink-audit scan examples --format text
-npm exec -- chainlink-audit scan examples --format json
-npm exec -- chainlink-audit scan examples --format markdown --out chainlink-report.md
-npm exec -- chainlink-audit scan examples --format html --out chainlink-report.html
+node packages/cli/dist/index.js scan examples --format text
+node packages/cli/dist/index.js scan examples --format json
+node packages/cli/dist/index.js scan examples --format markdown --out chainlink-report.md
+node packages/cli/dist/index.js scan examples --format html --out chainlink-report.html
+node packages/cli/dist/index.js scan examples --format sarif --out chainlink-report.sarif
 ```
 
 ## Example Output
@@ -113,6 +116,8 @@ Findings: 14
 ## How To Interpret Findings
 
 Every finding is a potential issue. The scanner uses simple pattern matching and deliberately avoids claiming confirmed exploitation. Auditors should validate each lead by reading source, checking deployment assumptions, and adding tests where appropriate.
+
+SARIF output is generated locally only. Uploading SARIF to GitHub Code Scanning is optional and should be enabled by the repository owner according to their GitHub plan and security settings.
 
 Fields include:
 
@@ -187,7 +192,6 @@ If the CLI helps identify a potential issue in a live protocol, follow that prot
 ## Roadmap
 
 - AST-based rule engine.
-- SARIF output for GitHub code scanning.
 - `chainlink-audit ci` helper.
 - Data Streams verification rules.
 - Optional RPC-aware checks for feed addresses, heartbeats, and network assumptions.

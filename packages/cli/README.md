@@ -9,6 +9,7 @@ chainlink-audit init
 chainlink-audit scan .
 chainlink-audit scan . --format markdown --out chainlink-report.md
 chainlink-audit scan . --format html --out chainlink-report.html
+chainlink-audit scan . --format sarif --out chainlink-report.sarif
 ```
 
 Findings are heuristic leads for manual review, not confirmed vulnerabilities.

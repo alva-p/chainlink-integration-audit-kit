@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig, loadConfig, writeDefaultConfig } from "../src/config.js";
 import { renderHtml } from "../src/reporters/html.js";
 import { renderMarkdown } from "../src/reporters/markdown.js";
+import { renderSarif } from "../src/reporters/sarif.js";
 import { renderText } from "../src/reporters/text.js";
 import { rules } from "../src/rules/index.js";
 import { scanPath } from "../src/scanner.js";
@@ -251,7 +252,7 @@ describe("config", () => {
 });
 
 describe("reporters", () => {
-  it("renders text, markdown, and HTML reports", async () => {
+  it("renders text, markdown, HTML, and SARIF reports", async () => {
     const dir = await fixture({
       "Feed.sol": `
         contract Feed {
@@ -266,6 +267,8 @@ describe("reporters", () => {
     const text = renderText(result);
     const markdown = renderMarkdown(result);
     const html = renderHtml(result);
+    const sarif = renderSarif(result);
+    const parsedSarif = JSON.parse(sarif);
 
     expect(text).toContain("Chainlink Integration Audit Kit");
     expect(text).toContain("Excluded paths");
@@ -278,6 +281,10 @@ describe("reporters", () => {
     expect(html).toContain("Potential issue:");
     expect(html).toContain("data-theme");
     expect(html).toContain("theme-toggle");
+    expect(parsedSarif.version).toBe("2.1.0");
+    expect(parsedSarif.runs[0].tool.driver.name).toBe("chainlink-audit");
+    expect(parsedSarif.runs[0].results[0].ruleId).toBe("CL-DF-001");
+    expect(parsedSarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri).toContain("Feed.sol");
 
     const reportPath = path.join(dir, "report.md");
     await writeFile(reportPath, markdown);

@@ -20,8 +20,10 @@ export function severityRank(severity: Severity): number {
 }
 
 export function parseOutputFormat(value: string): OutputFormat {
-  if (value === "text" || value === "json" || value === "markdown" || value === "html") return value;
-  throw new Error(`Unsupported format "${value}". Use text, json, markdown, or html.`);
+  if (value === "text" || value === "json" || value === "markdown" || value === "html" || value === "sarif") {
+    return value;
+  }
+  throw new Error(`Unsupported format "${value}". Use text, json, markdown, html, or sarif.`);
 }
 
 export function parseSeverity(value: string): Severity {

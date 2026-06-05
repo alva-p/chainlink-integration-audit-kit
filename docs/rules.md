@@ -4,7 +4,7 @@ All MVP findings are potential issues and require manual review.
 
 The default config excludes common noisy directories: `test/`, `tests/`, `mock/`, `mocks/`, `script/`, and `lib/`.
 
-Supported report formats are `text`, `json`, `markdown`, and `html`.
+Supported report formats are `text`, `json`, `markdown`, `html`, and `sarif`.
 
 ## Data Feeds
 
