@@ -65,6 +65,18 @@ npm exec -- chainlink-audit scan examples --format html --out chainlink-report.h
 
 ## Example Output
 
+### HTML Report
+
+![Chainlink Audit Kit HTML report dark mode](docs/assets/html-report-dark.png)
+
+Generate it with:
+
+```bash
+chainlink-audit scan . --format html --out chainlink-report.html
+```
+
+### Text Report
+
 ```text
 Chainlink Integration Audit Kit
 Target: examples
