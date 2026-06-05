@@ -24,7 +24,7 @@ The CLI detects likely Chainlink product usage and reports potential integration
 ## Install From Source
 
 ```bash
-git clone https://github.com/alva/chainlink-integration-audit-kit.git
+git clone https://github.com/alva-p/chainlink-integration-audit-kit.git
 cd chainlink-integration-audit-kit
 npm install
 npm run build

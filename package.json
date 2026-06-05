@@ -19,12 +19,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alva/chainlink-integration-audit-kit.git"
+    "url": "git+https://github.com/alva-p/chainlink-integration-audit-kit.git"
   },
   "bugs": {
-    "url": "https://github.com/alva/chainlink-integration-audit-kit/issues"
+    "url": "https://github.com/alva-p/chainlink-integration-audit-kit/issues"
   },
-  "homepage": "https://github.com/alva/chainlink-integration-audit-kit#readme",
+  "homepage": "https://github.com/alva-p/chainlink-integration-audit-kit#readme",
   "workspaces": [
     "packages/cli"
   ],
