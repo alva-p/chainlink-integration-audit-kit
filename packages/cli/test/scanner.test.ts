@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { defaultConfig, loadConfig, writeDefaultConfig } from "../src/config.js";
+import { renderHtml } from "../src/reporters/html.js";
 import { renderMarkdown } from "../src/reporters/markdown.js";
 import { renderText } from "../src/reporters/text.js";
 import { rules } from "../src/rules/index.js";
@@ -106,7 +107,7 @@ describe("scanPath", () => {
     const dir = await fixture({
       ".chainlink-audit.json": JSON.stringify({
         exclude: [],
-        format: "json",
+        format: "html",
         minSeverity: "high",
       }),
       "Auto.sol": `
@@ -122,7 +123,7 @@ describe("scanPath", () => {
 
     const result = await scanPath(dir);
 
-    expect(result.config.format).toBe("json");
+    expect(result.config.format).toBe("html");
     expect(result.config.minSeverity).toBe("high");
     expect(result.findings.map((finding) => finding.ruleId)).toEqual(["CL-AUTO-001"]);
   });
@@ -248,7 +249,7 @@ describe("config", () => {
 });
 
 describe("reporters", () => {
-  it("renders text and markdown reports", async () => {
+  it("renders text, markdown, and HTML reports", async () => {
     const dir = await fixture({
       "Feed.sol": `
         contract Feed {
@@ -262,6 +263,7 @@ describe("reporters", () => {
     const result = await scanPath(dir);
     const text = renderText(result);
     const markdown = renderMarkdown(result);
+    const html = renderHtml(result);
 
     expect(text).toContain("Chainlink Integration Audit Kit");
     expect(text).toContain("Excluded paths");
@@ -269,6 +271,9 @@ describe("reporters", () => {
     expect(markdown).toContain("# Chainlink Integration Audit Report");
     expect(markdown).toContain("Excluded paths");
     expect(markdown).toContain("potential issues");
+    expect(html).toContain("<!doctype html>");
+    expect(html).toContain("Chainlink Integration Audit Report");
+    expect(html).toContain("Potential issue:");
 
     const reportPath = path.join(dir, "report.md");
     await writeFile(reportPath, markdown);

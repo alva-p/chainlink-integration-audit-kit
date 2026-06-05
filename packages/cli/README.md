@@ -7,6 +7,7 @@ npm install -g chainlink-audit
 chainlink-audit init
 chainlink-audit scan .
 chainlink-audit scan . --format markdown --out chainlink-report.md
+chainlink-audit scan . --format html --out chainlink-report.html
 ```
 
 Findings are heuristic leads for manual review, not confirmed vulnerabilities.

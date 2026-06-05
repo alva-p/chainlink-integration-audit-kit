@@ -9,6 +9,7 @@ npm install -g chainlink-audit
 chainlink-audit init
 chainlink-audit scan .
 chainlink-audit scan . --format markdown --out chainlink-report.md
+chainlink-audit scan . --format html --out chainlink-report.html
 ```
 
 The CLI detects likely Chainlink product usage and reports potential integration risks. Findings are heuristic leads for manual review, not confirmed vulnerabilities.
@@ -46,6 +47,7 @@ chainlink-audit scan <path>
 chainlink-audit scan <path> --format text
 chainlink-audit scan <path> --format json
 chainlink-audit scan <path> --format markdown --out chainlink-report.md
+chainlink-audit scan <path> --format html --out chainlink-report.html
 chainlink-audit scan <path> --min-severity medium
 chainlink-audit init
 chainlink-audit rules
@@ -58,6 +60,7 @@ Local repository examples:
 npm exec -- chainlink-audit scan examples --format text
 npm exec -- chainlink-audit scan examples --format json
 npm exec -- chainlink-audit scan examples --format markdown --out chainlink-report.md
+npm exec -- chainlink-audit scan examples --format html --out chainlink-report.html
 ```
 
 ## Example Output
@@ -160,4 +163,4 @@ If the CLI helps identify a potential issue in a live protocol, follow that prot
 - `chainlink-audit ci` helper.
 - Data Streams verification rules.
 - Optional RPC-aware checks for feed addresses, heartbeats, and network assumptions.
-- HTML report output.
+- HTML report polish and templates.

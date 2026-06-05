@@ -1,6 +1,6 @@
 export type Severity = "info" | "low" | "medium" | "high";
 export type Confidence = "low" | "medium" | "high";
-export type OutputFormat = "text" | "json" | "markdown";
+export type OutputFormat = "text" | "json" | "markdown" | "html";
 export type ChainlinkProduct =
   | "data-feeds"
   | "ccip"

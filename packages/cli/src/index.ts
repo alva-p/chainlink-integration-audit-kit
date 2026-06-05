@@ -9,6 +9,7 @@ import {
   writeDefaultConfig,
 } from "./config.js";
 import { renderJson } from "./reporters/json.js";
+import { renderHtml } from "./reporters/html.js";
 import { renderMarkdown } from "./reporters/markdown.js";
 import { renderText } from "./reporters/text.js";
 import { rules } from "./rules/index.js";
@@ -20,6 +21,7 @@ const version = "0.1.0";
 function render(format: OutputFormat, result: Awaited<ReturnType<typeof scanPath>>): string {
   if (format === "json") return renderJson(result);
   if (format === "markdown") return renderMarkdown(result);
+  if (format === "html") return renderHtml(result);
   return renderText(result);
 }
 
@@ -33,7 +35,7 @@ program
 program
   .command("scan")
   .argument("<path>", "Solidity file or repository path to scan")
-  .option("--format <format>", "Output format: text, json, markdown")
+  .option("--format <format>", "Output format: text, json, markdown, html")
   .option("--min-severity <severity>", "Minimum severity: info, low, medium, high")
   .option("--out <file>", "Write report to a file instead of stdout")
   .action(async (
