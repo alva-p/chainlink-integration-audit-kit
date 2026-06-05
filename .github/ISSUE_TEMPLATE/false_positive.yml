@@ -1,0 +1,52 @@
+name: False positive
+description: Report a scanner finding that should be reduced or suppressed.
+title: "[False positive]: "
+labels: ["false-positive", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        False positives are expected in heuristic rules. Reports like this help make the scanner more useful.
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID
+      placeholder: "CL-DF-001"
+    validations:
+      required: true
+  - type: dropdown
+    id: service
+    attributes:
+      label: Chainlink service
+      options:
+        - Data Feeds
+        - CCIP
+        - VRF
+        - Automation
+        - Functions / CRE
+        - Data Streams
+        - Multiple / unsure
+    validations:
+      required: true
+  - type: textarea
+    id: snippet
+    attributes:
+      label: Relevant code
+      description: Paste a minimal snippet or link to a public file.
+      render: solidity
+    validations:
+      required: true
+  - type: textarea
+    id: why-safe
+    attributes:
+      label: Why is this safe?
+      description: Explain the validation or assumption the scanner missed.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Scanner output
+      render: text
+    validations:
+      required: false

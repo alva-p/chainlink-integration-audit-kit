@@ -33,7 +33,7 @@ Each example should include:
 
 ## Security Reports
 
-Do not disclose live third-party vulnerabilities in issues or pull requests. Use the affected project's security contact first. See `docs/disclosure-policy.md`.
+Do not disclose live third-party vulnerabilities in issues or pull requests. Use the affected project's security contact first. See `SECURITY.md` and `docs/disclosure-policy.md`.
 
 ## Style
 

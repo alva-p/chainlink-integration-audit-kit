@@ -170,10 +170,11 @@ npm run scan:examples
 - `docs/automation-checklist.md`
 - `docs/disclosure-policy.md`
 - `docs/audit-report-template.md`
+- `SECURITY.md`: responsible disclosure and tool security policy.
 
 ## Disclosure Policy
 
-If the CLI helps identify a potential issue in a live protocol, follow that protocol's security policy or bug bounty process. Do not publish exploit details before maintainers have had reasonable time to respond. See `docs/disclosure-policy.md`.
+If the CLI helps identify a potential issue in a live protocol, follow that protocol's security policy or bug bounty process. Do not publish exploit details before maintainers have had reasonable time to respond. See `SECURITY.md` and `docs/disclosure-policy.md`.
 
 ## Limitations
 

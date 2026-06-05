@@ -1,0 +1,42 @@
+- name: bug
+  color: d73a4a
+  description: Something is not working as intended.
+- name: needs-triage
+  color: fbca04
+  description: Needs maintainer review and prioritization.
+- name: false-positive
+  color: cfd3d7
+  description: Scanner output that should be reduced or suppressed.
+- name: rule-request
+  color: 0e8a16
+  description: Proposal for a new Chainlink security rule.
+- name: protocol-scan
+  color: 1d76db
+  description: Notes from running the scanner against a public protocol.
+- name: data-feeds
+  color: 5319e7
+  description: Chainlink Data Feeds rules, examples, or docs.
+- name: ccip
+  color: 0052cc
+  description: Chainlink CCIP rules, examples, or docs.
+- name: vrf
+  color: bfd4f2
+  description: Chainlink VRF rules, examples, or docs.
+- name: automation
+  color: 006b75
+  description: Chainlink Automation rules, examples, or docs.
+- name: functions-cre
+  color: fef2c0
+  description: Chainlink Functions or CRE migration rules.
+- name: data-streams
+  color: c5def5
+  description: Chainlink Data Streams rules, examples, or docs.
+- name: documentation
+  color: 0075ca
+  description: README, guides, templates, or examples documentation.
+- name: good-first-issue
+  color: 7057ff
+  description: Small, well-scoped contribution.
+- name: help-wanted
+  color: 008672
+  description: Maintainer would welcome external help.

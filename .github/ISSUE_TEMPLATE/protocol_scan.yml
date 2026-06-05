@@ -1,0 +1,38 @@
+name: Protocol scan result
+description: Share a non-sensitive scan result from a public protocol.
+title: "[Protocol scan]: "
+labels: ["protocol-scan", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not disclose live exploitable vulnerabilities in a public issue. Use the protocol's private security channel first.
+  - type: input
+    id: repo
+    attributes:
+      label: Public repository
+      placeholder: "https://github.com/example/protocol"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command used
+      render: shell
+      placeholder: "chainlink-audit scan . --format markdown"
+    validations:
+      required: true
+  - type: textarea
+    id: findings
+    attributes:
+      label: Findings summary
+      description: Summarize non-sensitive findings, false positives, or rule calibration notes.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Mention excluded paths, config, or manual review outcome.
+    validations:
+      required: false

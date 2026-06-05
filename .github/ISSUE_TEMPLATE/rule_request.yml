@@ -1,0 +1,48 @@
+name: Rule request
+description: Suggest a new Chainlink integration security rule.
+title: "[Rule]: "
+labels: ["rule-request", "needs-triage"]
+body:
+  - type: dropdown
+    id: service
+    attributes:
+      label: Chainlink service
+      options:
+        - Data Feeds
+        - CCIP
+        - VRF
+        - Automation
+        - Functions / CRE
+        - Data Streams
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: pattern
+    attributes:
+      label: Risk pattern
+      description: What unsafe or risky pattern should the scanner detect?
+    validations:
+      required: true
+  - type: textarea
+    id: vulnerable
+    attributes:
+      label: Vulnerable example
+      description: Minimal Solidity snippet or public reference.
+      render: solidity
+    validations:
+      required: false
+  - type: textarea
+    id: fixed
+    attributes:
+      label: Safer example
+      render: solidity
+    validations:
+      required: false
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Link docs, public audit reports, incidents, or Chainlink references.
+    validations:
+      required: false
