@@ -100,7 +100,9 @@ describe("scanPath", () => {
     const result = await scanPath(dir);
 
     expect(result.scannedFiles).toBe(1);
-    expect(result.findings.every((finding) => finding.file.includes("contracts/Feed.sol"))).toBe(true);
+    expect(
+      result.findings.every((finding) => finding.file.split(path.sep).join("/").includes("contracts/Feed.sol")),
+    ).toBe(true);
   });
 
   it("loads project config and filters by minSeverity", async () => {
