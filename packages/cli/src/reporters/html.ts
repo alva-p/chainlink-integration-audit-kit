@@ -59,11 +59,19 @@ export function renderHtml(result: ScanResult): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Chainlink Integration Audit Report</title>
+  <script>
+    (function () {
+      var storedTheme = localStorage.getItem("chainlink-audit-theme");
+      var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = storedTheme || (systemDark ? "dark" : "light");
+    })();
+  </script>
   <style>
     :root {
-      color-scheme: light;
+      color-scheme: light dark;
       --bg: #f7f9fc;
       --panel: #ffffff;
+      --panel-strong: #f8fafc;
       --text: #111827;
       --muted: #5b6472;
       --border: #d8dee9;
@@ -72,6 +80,46 @@ export function renderHtml(result: ScanResult): string {
       --low: #175cd3;
       --info: #475467;
       --accent: #0f5fff;
+      --accent-soft: #eef4ff;
+      --accent-border: #c7d7fe;
+      --accent-text: #253b74;
+      --shadow: 0 1px 2px rgb(16 24 40 / 4%);
+    }
+    :root[data-theme="dark"] {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-strong: #20242d;
+      --text: #eef2f7;
+      --muted: #a7b0bf;
+      --border: #303642;
+      --high: #ff8a80;
+      --medium: #ffbf66;
+      --low: #70b8ff;
+      --info: #c4cad4;
+      --accent: #72a7ff;
+      --accent-soft: #172033;
+      --accent-border: #2f4975;
+      --accent-text: #c9d8ff;
+      --shadow: 0 14px 32px rgb(0 0 0 / 22%);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --panel-strong: #20242d;
+        --text: #eef2f7;
+        --muted: #a7b0bf;
+        --border: #303642;
+        --high: #ff8a80;
+        --medium: #ffbf66;
+        --low: #70b8ff;
+        --info: #c4cad4;
+        --accent: #72a7ff;
+        --accent-soft: #172033;
+        --accent-border: #2f4975;
+        --accent-text: #c9d8ff;
+        --shadow: 0 14px 32px rgb(0 0 0 / 22%);
+      }
     }
     * { box-sizing: border-box; }
     body {
@@ -80,6 +128,40 @@ export function renderHtml(result: ScanResult): string {
       color: var(--text);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.5;
+    }
+    .topbar {
+      align-items: center;
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+    .brand {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .theme-toggle {
+      appearance: none;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 12px;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+    .theme-toggle:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .theme-toggle:focus-visible {
+      outline: 3px solid var(--accent-border);
+      outline-offset: 2px;
     }
     main {
       width: min(1120px, calc(100% - 32px));
@@ -120,7 +202,7 @@ export function renderHtml(result: ScanResult): string {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 8px;
-      box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+      box-shadow: var(--shadow);
     }
     .summary-card {
       padding: 16px;
@@ -138,10 +220,10 @@ export function renderHtml(result: ScanResult): string {
       overflow-wrap: anywhere;
     }
     .note {
-      background: #eef4ff;
-      border: 1px solid #c7d7fe;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
       border-radius: 8px;
-      color: #253b74;
+      color: var(--accent-text);
       margin: 0 0 24px;
       padding: 14px 16px;
     }
@@ -193,6 +275,9 @@ export function renderHtml(result: ScanResult): string {
     .severity-high .badge.severity { border-color: #fecdca; color: var(--high); }
     .severity-medium .badge.severity { border-color: #fedf89; color: var(--medium); }
     .severity-low .badge.severity { border-color: #b2ddff; color: var(--low); }
+    :root[data-theme="dark"] .severity-high .badge.severity { border-color: #6f2b2b; }
+    :root[data-theme="dark"] .severity-medium .badge.severity { border-color: #694614; }
+    :root[data-theme="dark"] .severity-low .badge.severity { border-color: #254c7a; }
     .meta {
       display: grid;
       gap: 10px;
@@ -200,7 +285,7 @@ export function renderHtml(result: ScanResult): string {
       margin: 12px 0 4px;
     }
     .meta div {
-      background: #f8fafc;
+      background: var(--panel-strong);
       border-radius: 6px;
       padding: 10px;
     }
@@ -226,13 +311,23 @@ export function renderHtml(result: ScanResult): string {
     @media (max-width: 640px) {
       main { width: min(100% - 20px, 1120px); padding-top: 24px; }
       h1 { font-size: 28px; }
+      .topbar { align-items: flex-start; }
       .finding-header { display: block; }
       .badges { justify-content: flex-start; margin-top: 12px; }
+    }
+    @media print {
+      .theme-toggle { display: none; }
+      body { background: #ffffff; color: #111827; }
+      .summary-card, .finding, .empty { box-shadow: none; }
     }
   </style>
 </head>
 <body>
   <main>
+    <div class="topbar">
+      <div class="brand">chainlink-audit</div>
+      <button class="theme-toggle" type="button" aria-label="Toggle dark mode">Theme: <span id="theme-label">System</span></button>
+    </div>
     <header class="hero">
       <p class="eyebrow">Chainlink Audit Kit</p>
       <h1>Chainlink Integration Audit Report</h1>
@@ -259,6 +354,25 @@ ${findings}
 
     <footer>Generated at ${escapeHtml(generatedAt)} by chainlink-audit.</footer>
   </main>
+  <script>
+    (function () {
+      var button = document.querySelector(".theme-toggle");
+      var label = document.getElementById("theme-label");
+      function applyLabel() {
+        var theme = document.documentElement.dataset.theme || "light";
+        if (label) label.textContent = theme === "dark" ? "Dark" : "Light";
+      }
+      if (button) {
+        button.addEventListener("click", function () {
+          var nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+          document.documentElement.dataset.theme = nextTheme;
+          localStorage.setItem("chainlink-audit-theme", nextTheme);
+          applyLabel();
+        });
+      }
+      applyLabel();
+    })();
+  </script>
 </body>
 </html>`;
 }

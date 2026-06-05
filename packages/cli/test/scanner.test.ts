@@ -274,6 +274,8 @@ describe("reporters", () => {
     expect(html).toContain("<!doctype html>");
     expect(html).toContain("Chainlink Integration Audit Report");
     expect(html).toContain("Potential issue:");
+    expect(html).toContain("data-theme");
+    expect(html).toContain("theme-toggle");
 
     const reportPath = path.join(dir, "report.md");
     await writeFile(reportPath, markdown);
