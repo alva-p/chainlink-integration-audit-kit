@@ -1,5 +1,9 @@
 # Chainlink Audit Kit
 
+[![npm version](https://img.shields.io/npm/v/chainlink-audit.svg)](https://www.npmjs.com/package/chainlink-audit)
+[![CI](https://github.com/alva-p/chainlink-integration-audit-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/alva-p/chainlink-integration-audit-kit/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/alva-p/chainlink-integration-audit-kit)](https://github.com/alva-p/chainlink-integration-audit-kit/releases/tag/v0.1.0)
+
 Security CLI for Chainlink-powered smart contracts.
 
 Scan Solidity repositories for potential risky integration patterns across Chainlink Data Feeds, CCIP, VRF, Automation, and Functions/CRE.
@@ -13,6 +17,17 @@ chainlink-audit scan . --format html --out chainlink-report.html
 ```
 
 The CLI detects likely Chainlink product usage and reports potential integration risks. Findings are heuristic leads for manual review, not confirmed vulnerabilities.
+
+## Install
+
+```bash
+npm install -g chainlink-audit
+chainlink-audit version
+```
+
+Published package: [`chainlink-audit@0.1.0`](https://www.npmjs.com/package/chainlink-audit)
+
+GitHub release: [`v0.1.0`](https://github.com/alva-p/chainlink-integration-audit-kit/releases/tag/v0.1.0)
 
 ## What It Detects
 
@@ -82,9 +97,9 @@ Chainlink Integration Audit Kit
 Target: examples
 Solidity files scanned: 11
 Detected Chainlink products: automation, ccip, data-feeds, vrf
-Findings: 14
 Minimum severity: low
 Excluded paths: test/, tests/, mock/, mocks/, script/, lib/
+Findings: 14
 
 [HIGH] CL-CCIP-001 - Potential CCIP receive without source chain validation
   Confidence: medium
