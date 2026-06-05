@@ -22,6 +22,12 @@ export interface Finding {
   manualReviewRequired: boolean;
 }
 
+export interface AuditConfig {
+  exclude: string[];
+  format: OutputFormat;
+  minSeverity: Severity;
+}
+
 export interface RuleMetadata {
   ruleId: string;
   product: ChainlinkProduct;
@@ -56,4 +62,9 @@ export interface ScanResult {
   scannedFiles: number;
   products: ChainlinkProduct[];
   findings: Finding[];
+  config: AuditConfig;
+}
+
+export interface ScanOptions {
+  config?: AuditConfig;
 }

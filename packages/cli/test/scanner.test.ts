@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { defaultConfig, loadConfig, writeDefaultConfig } from "../src/config.js";
 import { renderMarkdown } from "../src/reporters/markdown.js";
 import { renderText } from "../src/reporters/text.js";
 import { rules } from "../src/rules/index.js";
@@ -65,6 +66,65 @@ describe("scanPath", () => {
     expect(result.findings.map((finding) => finding.ruleId)).toContain("CL-DF-001");
     expect(result.findings.map((finding) => finding.ruleId)).toContain("CL-DF-002");
     expect(result.findings[0]).toHaveProperty("manualReviewRequired", true);
+  });
+
+  it("uses default excludes for noisy test and mock directories", async () => {
+    const dir = await fixture({
+      "contracts/Feed.sol": `
+        contract Feed {
+          function read() external view returns (uint256) {
+            (, int256 answer,,,) = feed.latestRoundData();
+            return uint256(answer);
+          }
+        }
+      `,
+      "test/FeedTest.sol": `
+        contract FeedTest {
+          function read() external view returns (uint256) {
+            (, int256 answer,,,) = feed.latestRoundData();
+            return uint256(answer);
+          }
+        }
+      `,
+      "mocks/MockFeed.sol": `
+        contract MockFeed {
+          function read() external view returns (uint256) {
+            (, int256 answer,,,) = feed.latestRoundData();
+            return uint256(answer);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.scannedFiles).toBe(1);
+    expect(result.findings.every((finding) => finding.file.includes("contracts/Feed.sol"))).toBe(true);
+  });
+
+  it("loads project config and filters by minSeverity", async () => {
+    const dir = await fixture({
+      ".chainlink-audit.json": JSON.stringify({
+        exclude: [],
+        format: "json",
+        minSeverity: "high",
+      }),
+      "Auto.sol": `
+        contract Auto {
+          function checkUpkeep(bytes calldata) external returns (bool, bytes memory) {}
+          function performUpkeep(bytes calldata performData) external {
+            uint256 id = abi.decode(performData, (uint256));
+            counter += id;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.config.format).toBe("json");
+    expect(result.config.minSeverity).toBe("high");
+    expect(result.findings.map((finding) => finding.ruleId)).toEqual(["CL-AUTO-001"]);
   });
 
   it("detects L2 Data Feed sequencer uptime lead", async () => {
@@ -153,6 +213,11 @@ describe("scanPath", () => {
 
   it("detects Functions/CRE leads", async () => {
     const dir = await fixture({
+      ".chainlink-audit.json": JSON.stringify({
+        exclude: [],
+        format: "text",
+        minSeverity: "info",
+      }),
       "FunctionsConsumer.sol": `
         contract FunctionsConsumer is FunctionsClient {
           string sourceCode = "const apiKey = secrets.apiKey; const r = await Functions.makeHttpRequest({ url: 'https://api.example.com' });";
@@ -167,6 +232,18 @@ describe("scanPath", () => {
     expect(result.findings.map((finding) => finding.ruleId)).toEqual(
       expect.arrayContaining(["CL-FN-001", "CL-FN-002"]),
     );
+  });
+});
+
+describe("config", () => {
+  it("writes and loads the default config", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "chainlink-audit-config-"));
+    const configPath = path.join(dir, ".chainlink-audit.json");
+
+    await writeDefaultConfig(configPath);
+    const config = await loadConfig(dir);
+
+    expect(config).toEqual(defaultConfig);
   });
 });
 
@@ -187,8 +264,10 @@ describe("reporters", () => {
     const markdown = renderMarkdown(result);
 
     expect(text).toContain("Chainlink Integration Audit Kit");
+    expect(text).toContain("Excluded paths");
     expect(text).toContain("Manual review required");
     expect(markdown).toContain("# Chainlink Integration Audit Report");
+    expect(markdown).toContain("Excluded paths");
     expect(markdown).toContain("potential issues");
 
     const reportPath = path.join(dir, "report.md");

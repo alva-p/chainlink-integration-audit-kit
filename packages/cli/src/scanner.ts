@@ -1,7 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { defaultConfig, loadConfig, severityRank } from "./config.js";
 import { rules } from "./rules/index.js";
-import type { ChainlinkProduct, Finding, RepoSignals, ScanResult } from "./types.js";
+import type { AuditConfig, ChainlinkProduct, Finding, RepoSignals, ScanOptions, ScanResult } from "./types.js";
 
 const ignoredDirectories = new Set([
   ".git",
@@ -14,7 +15,65 @@ const ignoredDirectories = new Set([
   "build",
 ]);
 
-async function collectSolidityFiles(targetPath: string): Promise<string[]> {
+function normalizePath(value: string): string {
+  return value.split(path.sep).join("/");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function globToRegExp(pattern: string): RegExp {
+  const normalized = normalizePath(pattern);
+  let source = "";
+  for (let index = 0; index < normalized.length; index++) {
+    const char = normalized[index];
+    const next = normalized[index + 1];
+    if (char === "*" && next === "*") {
+      source += ".*";
+      index++;
+    } else if (char === "*") {
+      source += "[^/]*";
+    } else {
+      source += escapeRegExp(char);
+    }
+  }
+  return new RegExp(`(^|/)${source}($|/)`);
+}
+
+function matchesExclude(relativePath: string, pattern: string): boolean {
+  const normalizedPath = normalizePath(relativePath).replace(/^\/+/, "");
+  const normalizedPattern = normalizePath(pattern).replace(/^\/+/, "");
+  if (normalizedPattern.length === 0) return false;
+
+  if (normalizedPattern.includes("*")) {
+    return globToRegExp(normalizedPattern).test(normalizedPath);
+  }
+
+  const directoryPattern = normalizedPattern.endsWith("/")
+    ? normalizedPattern.slice(0, -1)
+    : normalizedPattern;
+
+  return (
+    normalizedPath === directoryPattern ||
+    normalizedPath.startsWith(`${directoryPattern}/`) ||
+    normalizedPath.includes(`/${directoryPattern}/`)
+  );
+}
+
+function isExcluded(fileOrDirectory: string, scanRoot: string, config: AuditConfig): boolean {
+  const relativePath = path.relative(scanRoot, fileOrDirectory);
+  const normalized = normalizePath(relativePath || path.basename(fileOrDirectory));
+  return config.exclude.some((pattern) => matchesExclude(normalized, pattern));
+}
+
+async function collectSolidityFiles(
+  targetPath: string,
+  scanRoot: string,
+  config: AuditConfig,
+): Promise<string[]> {
+  if (isExcluded(targetPath, scanRoot, config)) return [];
+
   const stat = await fs.stat(targetPath);
   if (stat.isFile()) {
     if (!targetPath.endsWith(".sol")) return [];
@@ -26,7 +85,7 @@ async function collectSolidityFiles(targetPath: string): Promise<string[]> {
     entries
       .filter((entry) => !(entry.isDirectory() && ignoredDirectories.has(entry.name)))
       .filter((entry) => !entry.name.startsWith(".") || entry.name === ".")
-      .map((entry) => collectSolidityFiles(path.join(targetPath, entry.name))),
+      .map((entry) => collectSolidityFiles(path.join(targetPath, entry.name), scanRoot, config)),
   );
 
   return nested.flat();
@@ -51,9 +110,11 @@ function detectL2Target(files: Array<{ file: string; content: string }>): boolea
   return /(\barbitrum\b|\boptimism\b|\bbase\b|\bpolygon\b|\bzksync\b|\bscroll\b|\blinea\b|\bmantle\b|\bblast\b|sepolia.*\bbase\b|\bl2\b)/i.test(combined);
 }
 
-export async function scanPath(targetPath: string): Promise<ScanResult> {
+export async function scanPath(targetPath: string, options: ScanOptions = {}): Promise<ScanResult> {
   const absoluteTarget = path.resolve(targetPath);
-  const solidityFiles = await collectSolidityFiles(absoluteTarget);
+  const config = options.config ?? await loadConfig(absoluteTarget);
+  const scanRoot = (await fs.stat(absoluteTarget)).isFile() ? path.dirname(absoluteTarget) : absoluteTarget;
+  const solidityFiles = await collectSolidityFiles(absoluteTarget, scanRoot, config);
   const files = await Promise.all(
     solidityFiles.map(async (file) => ({
       file: path.relative(process.cwd(), file) || file,
@@ -75,7 +136,10 @@ export async function scanPath(targetPath: string): Promise<ScanResult> {
     }
   }
 
-  findings.sort((a, b) => {
+  const minSeverityRank = severityRank(config.minSeverity ?? defaultConfig.minSeverity);
+  const filteredFindings = findings.filter((finding) => severityRank(finding.severity) >= minSeverityRank);
+
+  filteredFindings.sort((a, b) => {
     const fileCompare = a.file.localeCompare(b.file);
     if (fileCompare !== 0) return fileCompare;
     return a.line - b.line || a.ruleId.localeCompare(b.ruleId);
@@ -85,6 +149,7 @@ export async function scanPath(targetPath: string): Promise<ScanResult> {
     targetPath,
     scannedFiles: files.length,
     products: [...repoSignals.products].sort(),
-    findings,
+    findings: filteredFindings,
+    config,
   };
 }

@@ -6,6 +6,7 @@ Scan Solidity repositories for potential risky integration patterns across Chain
 
 ```bash
 npm install -g chainlink-audit
+chainlink-audit init
 chainlink-audit scan .
 chainlink-audit scan . --format markdown --out chainlink-report.md
 ```
@@ -34,6 +35,7 @@ npm exec -- chainlink-audit version
 During local development, run:
 
 ```bash
+npm exec -- chainlink-audit init
 npm exec -- chainlink-audit scan examples
 ```
 
@@ -44,6 +46,8 @@ chainlink-audit scan <path>
 chainlink-audit scan <path> --format text
 chainlink-audit scan <path> --format json
 chainlink-audit scan <path> --format markdown --out chainlink-report.md
+chainlink-audit scan <path> --min-severity medium
+chainlink-audit init
 chainlink-audit rules
 chainlink-audit version
 ```
@@ -61,9 +65,11 @@ npm exec -- chainlink-audit scan examples --format markdown --out chainlink-repo
 ```text
 Chainlink Integration Audit Kit
 Target: examples
-Solidity files scanned: 16
+Solidity files scanned: 11
 Detected Chainlink products: automation, ccip, data-feeds, vrf
 Findings: 14
+Minimum severity: low
+Excluded paths: test/, tests/, mock/, mocks/, script/, lib/
 
 [HIGH] CL-CCIP-001 - Potential CCIP receive without source chain validation
   Confidence: medium
@@ -88,6 +94,26 @@ Fields include:
 - `manualReviewRequired`: always true for MVP findings.
 
 False positives are expected, especially in abstract base contracts, mocks, tests, and code with custom validation helpers.
+
+## Configuration
+
+Create a config file:
+
+```bash
+chainlink-audit init
+```
+
+Default `.chainlink-audit.json`:
+
+```json
+{
+  "exclude": ["test/", "tests/", "mock/", "mocks/", "script/", "lib/"],
+  "format": "text",
+  "minSeverity": "low"
+}
+```
+
+The scanner reads `.chainlink-audit.json` from the scan target or a parent directory. CLI flags override config values for that run.
 
 ## Examples
 
@@ -132,7 +158,6 @@ If the CLI helps identify a potential issue in a live protocol, follow that prot
 - AST-based rule engine.
 - SARIF output for GitHub code scanning.
 - `chainlink-audit ci` helper.
-- `chainlink-audit init` config generator.
 - Data Streams verification rules.
 - Optional RPC-aware checks for feed addresses, heartbeats, and network assumptions.
 - HTML report output.

@@ -2,6 +2,8 @@
 
 All MVP findings are potential issues and require manual review.
 
+The default config excludes common noisy directories: `test/`, `tests/`, `mock/`, `mocks/`, `script/`, and `lib/`.
+
 ## Data Feeds
 
 | Rule ID | Severity | Title |

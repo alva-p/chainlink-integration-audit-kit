@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 import { promises as fs } from "node:fs";
 import { Command } from "commander";
+import {
+  configFileName,
+  loadConfig,
+  parseOutputFormat,
+  parseSeverity,
+  writeDefaultConfig,
+} from "./config.js";
 import { renderJson } from "./reporters/json.js";
 import { renderMarkdown } from "./reporters/markdown.js";
 import { renderText } from "./reporters/text.js";
@@ -16,11 +23,6 @@ function render(format: OutputFormat, result: Awaited<ReturnType<typeof scanPath
   return renderText(result);
 }
 
-function parseFormat(value: string): OutputFormat {
-  if (value === "text" || value === "json" || value === "markdown") return value;
-  throw new Error(`Unsupported format "${value}". Use text, json, or markdown.`);
-}
-
 const program = new Command();
 
 program
@@ -31,12 +33,20 @@ program
 program
   .command("scan")
   .argument("<path>", "Solidity file or repository path to scan")
-  .option("--format <format>", "Output format: text, json, markdown", "text")
+  .option("--format <format>", "Output format: text, json, markdown")
+  .option("--min-severity <severity>", "Minimum severity: info, low, medium, high")
   .option("--out <file>", "Write report to a file instead of stdout")
-  .action(async (targetPath: string, options: { format: string; out?: string }) => {
+  .action(async (
+    targetPath: string,
+    options: { format?: string; minSeverity?: string; out?: string },
+  ) => {
     try {
-      const format = parseFormat(options.format);
-      const result = await scanPath(targetPath);
+      const config = await loadConfig(targetPath);
+      if (options.format) config.format = parseOutputFormat(options.format);
+      if (options.minSeverity) config.minSeverity = parseSeverity(options.minSeverity);
+
+      const format: OutputFormat = config.format;
+      const result = await scanPath(targetPath, { config });
       const output = render(format, result);
 
       if (options.out) {
@@ -51,6 +61,24 @@ program
       process.exitCode = 2;
     }
   });
+
+program.command("init").description(`Create ${configFileName} with recommended defaults`).action(async () => {
+  try {
+    await writeDefaultConfig();
+    console.log(`Created ${configFileName}`);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+    if (code === "EEXIST") {
+      console.error(`chainlink-audit: ${configFileName} already exists`);
+      process.exitCode = 1;
+      return;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`chainlink-audit: ${message}`);
+    process.exitCode = 2;
+  }
+});
 
 program.command("rules").description("List available MVP rules").action(() => {
   for (const rule of rules) {

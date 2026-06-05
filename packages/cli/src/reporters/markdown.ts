@@ -10,6 +10,8 @@ export function renderMarkdown(result: ScanResult): string {
     `- Target: \`${result.targetPath}\``,
     `- Solidity files scanned: ${result.scannedFiles}`,
     `- Detected Chainlink products: ${products}`,
+    `- Minimum severity: ${result.config.minSeverity}`,
+    `- Excluded paths: ${result.config.exclude.length > 0 ? result.config.exclude.join(", ") : "none"}`,
     `- Findings: ${result.findings.length}`,
     "",
     "This report contains potential issues produced by heuristic MVP rules. Findings require manual review before disclosure or remediation.",
