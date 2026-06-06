@@ -13,11 +13,12 @@ import { renderHtml } from "./reporters/html.js";
 import { renderMarkdown } from "./reporters/markdown.js";
 import { renderSarif } from "./reporters/sarif.js";
 import { renderText } from "./reporters/text.js";
+import { renderTriageMarkdown } from "./reporters/triage.js";
 import { rules } from "./rules/index.js";
 import { scanPath } from "./scanner.js";
-import type { OutputFormat } from "./types.js";
+import type { OutputFormat, ScanResult } from "./types.js";
 
-const version = "0.2.0";
+const version = "0.3.0";
 
 function render(format: OutputFormat, result: Awaited<ReturnType<typeof scanPath>>): string {
   if (format === "json") return renderJson(result);
@@ -31,7 +32,7 @@ const program = new Command();
 
 program
   .name("chainlink-audit")
-  .description("CLI-first scanner for potential Chainlink integration risks in Solidity repositories.")
+  .description("CLI-first audit assistant for unverified Chainlink integration risk leads.")
   .version(version);
 
 program
@@ -66,6 +67,33 @@ program
     }
   });
 
+program
+  .command("triage")
+  .argument("<report.json>", "JSON report produced by chainlink-audit scan --format json")
+  .option("--out <file>", "Write triage markdown to a file instead of stdout")
+  .description("Convert a JSON scan report into a manual triage checklist")
+  .action(async (reportPath: string, options: { out?: string }) => {
+    try {
+      const raw = await fs.readFile(reportPath, "utf8");
+      const parsed = JSON.parse(raw) as Partial<ScanResult>;
+      if (!Array.isArray(parsed.findings) || typeof parsed.targetPath !== "string") {
+        throw new Error("Input does not look like a chainlink-audit JSON report");
+      }
+
+      const output = renderTriageMarkdown(parsed as ScanResult);
+      if (options.out) {
+        await fs.writeFile(options.out, `${output}\n`, "utf8");
+      } else {
+        console.log(output);
+      }
+      process.exitCode = 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`chainlink-audit: ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
 program.command("init").description(`Create ${configFileName} with recommended defaults`).action(async () => {
   try {
     await writeDefaultConfig();
@@ -87,7 +115,7 @@ program.command("init").description(`Create ${configFileName} with recommended d
 program.command("rules").description("List available MVP rules").action(() => {
   for (const rule of rules) {
     const metadata = rule.metadata;
-    console.log(`${metadata.ruleId} [${metadata.severity}] ${metadata.product} - ${metadata.title}`);
+    console.log(`${metadata.ruleId} [${metadata.severity} potential impact] ${metadata.product} - ${metadata.title}`);
   }
 });
 

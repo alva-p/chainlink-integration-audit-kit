@@ -7,6 +7,7 @@ import { renderHtml } from "../src/reporters/html.js";
 import { renderMarkdown } from "../src/reporters/markdown.js";
 import { renderSarif } from "../src/reporters/sarif.js";
 import { renderText } from "../src/reporters/text.js";
+import { renderTriageMarkdown } from "../src/reporters/triage.js";
 import { rules } from "../src/rules/index.js";
 import { scanPath } from "../src/scanner.js";
 
@@ -35,6 +36,8 @@ describe("rules metadata", () => {
         "CL-CCIP-003",
         "CL-CCIP-004",
         "CL-CCIP-005",
+        "CL-CCIP-006",
+        "CL-CCIP-007",
         "CL-VRF-001",
         "CL-VRF-002",
         "CL-VRF-003",
@@ -171,6 +174,112 @@ describe("scanPath", () => {
     );
   });
 
+  it("recognizes CCIP source validation in entrypoint modifiers", async () => {
+    const dir = await fixture({
+      "Receiver.sol": `
+        contract Receiver {
+          function ccipReceive(Client.Any2EVMMessage calldata message)
+            external
+            onlyRouter
+            onlyAllowlisted(message.sourceChainSelector, abi.decode(message.sender, (address)))
+          {
+            _ccipReceive(message);
+          }
+
+          function _ccipReceive(Client.Any2EVMMessage calldata message) internal {
+            (address account, uint256 amount) = abi.decode(message.data, (address, uint256));
+            credited[account] += amount;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+    const ruleIds = result.findings.map((finding) => finding.ruleId);
+
+    expect(ruleIds).not.toContain("CL-CCIP-001");
+    expect(ruleIds).not.toContain("CL-CCIP-002");
+    expect(ruleIds).not.toContain("CL-CCIP-003");
+  });
+
+  it("does not flag abstract CCIP receiver base contracts as application receivers", async () => {
+    const dir = await fixture({
+      "CCIPReceiver.sol": `
+        abstract contract CCIPReceiver {
+          function ccipReceive(Client.Any2EVMMessage calldata message) external onlyRouter {
+            _ccipReceive(message);
+          }
+
+          function _ccipReceive(Client.Any2EVMMessage memory message) internal virtual;
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.products).toContain("ccip");
+    expect(result.findings.map((finding) => finding.ruleId)).not.toEqual(
+      expect.arrayContaining(["CL-CCIP-001", "CL-CCIP-002", "CL-CCIP-003"]),
+    );
+  });
+
+  it("detects CCIP token amount indexing without length checks", async () => {
+    const dir = await fixture({
+      "TokenReceiver.sol": `
+        contract TokenReceiver is CCIPReceiver {
+          function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
+            Client.EVMTokenAmount[] memory tokenAmounts = message.destTokenAmounts;
+            address token = tokenAmounts[0].token;
+            uint256 amount = tokenAmounts[0].amount;
+            credited[token] += amount;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("CL-CCIP-006");
+  });
+
+  it("detects mutating CCIP receiver logic without messageId idempotency tracking", async () => {
+    const dir = await fixture({
+      "MintReceiver.sol": `
+        contract MintReceiver is CCIPReceiver {
+          function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
+            address account = abi.decode(message.data, (address));
+            token.mint(account, 1 ether);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("CL-CCIP-007");
+  });
+
+  it("does not flag CCIP idempotency when messageId tracking is visible", async () => {
+    const dir = await fixture({
+      "TrackedReceiver.sol": `
+        contract TrackedReceiver is CCIPReceiver {
+          mapping(bytes32 => bool) public processedMessages;
+
+          function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
+            if (processedMessages[message.messageId]) revert DuplicateMessage();
+            processedMessages[message.messageId] = true;
+            address account = abi.decode(message.data, (address));
+            token.mint(account, 1 ether);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((finding) => finding.ruleId)).not.toContain("CL-CCIP-007");
+  });
+
   it("detects VRF leads", async () => {
     const dir = await fixture({
       "VRF.sol": `
@@ -268,23 +377,30 @@ describe("reporters", () => {
     const markdown = renderMarkdown(result);
     const html = renderHtml(result);
     const sarif = renderSarif(result);
+    const triage = renderTriageMarkdown(result);
     const parsedSarif = JSON.parse(sarif);
 
     expect(text).toContain("Chainlink Integration Audit Kit");
     expect(text).toContain("Excluded paths");
     expect(text).toContain("Manual review required");
+    expect(text).toContain("Confirmed vulnerability: no");
     expect(markdown).toContain("# Chainlink Integration Audit Report");
     expect(markdown).toContain("Excluded paths");
-    expect(markdown).toContain("potential issues");
+    expect(markdown).toContain("unverified risk leads");
+    expect(markdown).toContain("Confirmed vulnerabilities: 0");
     expect(html).toContain("<!doctype html>");
     expect(html).toContain("Chainlink Integration Audit Report");
     expect(html).toContain("Potential issue:");
+    expect(html).toContain("Confirmed Vulnerabilities");
     expect(html).toContain("data-theme");
     expect(html).toContain("theme-toggle");
     expect(parsedSarif.version).toBe("2.1.0");
     expect(parsedSarif.runs[0].tool.driver.name).toBe("chainlink-audit");
     expect(parsedSarif.runs[0].results[0].ruleId).toBe("CL-DF-001");
     expect(parsedSarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri).toContain("Feed.sol");
+    expect(triage).toContain("# Chainlink Audit Triage");
+    expect(triage).toContain("False positive");
+    expect(triage).toContain("Needs more context");
 
     const reportPath = path.join(dir, "report.md");
     await writeFile(reportPath, markdown);

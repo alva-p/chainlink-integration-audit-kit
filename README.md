@@ -15,9 +15,10 @@ chainlink-audit scan .
 chainlink-audit scan . --format markdown --out chainlink-report.md
 chainlink-audit scan . --format html --out chainlink-report.html
 chainlink-audit scan . --format sarif --out chainlink-report.sarif
+chainlink-audit triage chainlink-report.json --out triage.md
 ```
 
-The CLI detects likely Chainlink product usage and reports potential integration risks. Findings are heuristic leads for manual review, not confirmed vulnerabilities.
+The CLI detects likely Chainlink product usage and reports unverified risk leads. Results require manual review and are not confirmed vulnerabilities.
 
 ## Install
 
@@ -34,6 +35,7 @@ GitHub releases: [chainlink-integration-audit-kit/releases](https://github.com/a
 
 - stale or incomplete Chainlink Data Feed validation
 - missing CCIP source chain, sender, or router validation
+- CCIP token amount indexing assumptions
 - unsafe VRF request and fulfillment tracking
 - Automation upkeep revalidation issues
 - Chainlink Functions migration and external API assumptions
@@ -66,6 +68,7 @@ chainlink-audit scan <path> --format markdown --out chainlink-report.md
 chainlink-audit scan <path> --format html --out chainlink-report.html
 chainlink-audit scan <path> --format sarif --out chainlink-report.sarif
 chainlink-audit scan <path> --min-severity medium
+chainlink-audit triage chainlink-report.json --out triage.md
 chainlink-audit init
 chainlink-audit rules
 chainlink-audit version
@@ -79,6 +82,7 @@ node packages/cli/dist/index.js scan examples --format json
 node packages/cli/dist/index.js scan examples --format markdown --out chainlink-report.md
 node packages/cli/dist/index.js scan examples --format html --out chainlink-report.html
 node packages/cli/dist/index.js scan examples --format sarif --out chainlink-report.sarif
+node packages/cli/dist/index.js triage chainlink-report.json --out triage.md
 ```
 
 ## Example Output
@@ -100,33 +104,36 @@ Chainlink Integration Audit Kit
 Target: examples
 Solidity files scanned: 11
 Detected Chainlink products: automation, ccip, data-feeds, vrf
-Minimum severity: low
+Minimum potential impact: low
 Excluded paths: test/, tests/, mock/, mocks/, script/, lib/
-Findings: 14
+Unverified leads: 14
 
-[HIGH] CL-CCIP-001 - Potential CCIP receive without source chain validation
-  Confidence: medium
+[HIGH POTENTIAL IMPACT] CL-CCIP-001 - Potential CCIP receive without source chain validation
+  Detection confidence: medium
   Location: examples/ccip/vulnerable/VulnerableCCIPReceiver.sol:11
   Description: Potential issue: messages from unexpected source chains may be accepted.
   Risk: Cross-chain spoofing or misrouted messages can trigger unauthorized state changes.
   Recommendation: Validate message.sourceChainSelector against an explicit allowlist before decoding payloads or mutating state.
   Manual review required: yes
+  Confirmed vulnerability: no
 ```
 
 ## How To Interpret Findings
 
-Every finding is a potential issue. The scanner uses simple pattern matching and deliberately avoids claiming confirmed exploitation. Auditors should validate each lead by reading source, checking deployment assumptions, and adding tests where appropriate.
+Every result is an unverified risk lead. The scanner uses simple pattern matching and deliberately avoids claiming confirmed exploitation. Auditors should validate each lead by reading source, checking deployment assumptions, and adding tests where appropriate.
 
 SARIF output is generated locally only. Uploading SARIF to GitHub Code Scanning is optional and should be enabled by the repository owner according to their GitHub plan and security settings.
 
 Fields include:
 
 - `ruleId`: stable rule identifier.
-- `severity`: expected impact if the issue is real.
-- `confidence`: scanner confidence based on available patterns.
+- `severity`: potential impact if the lead is real. This does not mean exploitability is confirmed.
+- `confidence`: detection confidence based on available patterns.
 - `file` and `line`: source location for review.
 - `title`, `description`, `risk`, `recommendation`: report-ready finding context.
 - `manualReviewRequired`: always true for MVP findings.
+
+Use `chainlink-audit triage <report.json>` to convert JSON output into a manual review checklist with false-positive, accepted-risk, and needs-context status fields.
 
 False positives are expected, especially in abstract base contracts, mocks, tests, and code with custom validation helpers.
 
@@ -193,6 +200,7 @@ If the CLI helps identify a potential issue in a live protocol, follow that prot
 
 - AST-based rule engine.
 - `chainlink-audit ci` helper.
+- richer `chainlink-audit triage` workflows.
 - Data Streams verification rules.
 - Optional RPC-aware checks for feed addresses, heartbeats, and network assumptions.
 - HTML report polish and templates.

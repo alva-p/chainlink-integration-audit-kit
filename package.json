@@ -2,7 +2,7 @@
   "name": "chainlink-integration-audit-kit",
   "version": "0.1.0",
   "private": true,
-  "description": "Security CLI for detecting potential Chainlink integration risks in Solidity repositories.",
+  "description": "Security review CLI for flagging unverified Chainlink integration risk leads in Solidity repositories.",
   "license": "MIT",
   "keywords": [
     "chainlink",

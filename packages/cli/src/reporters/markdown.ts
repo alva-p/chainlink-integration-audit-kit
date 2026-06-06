@@ -10,28 +10,30 @@ export function renderMarkdown(result: ScanResult): string {
     `- Target: \`${result.targetPath}\``,
     `- Solidity files scanned: ${result.scannedFiles}`,
     `- Detected Chainlink products: ${products}`,
-    `- Minimum severity: ${result.config.minSeverity}`,
+    `- Minimum potential impact: ${result.config.minSeverity}`,
     `- Excluded paths: ${result.config.exclude.length > 0 ? result.config.exclude.join(", ") : "none"}`,
-    `- Findings: ${result.findings.length}`,
+    `- Unverified leads: ${result.findings.length}`,
+    `- Confirmed vulnerabilities: 0`,
     "",
-    "This report contains potential issues produced by heuristic MVP rules. Findings require manual review before disclosure or remediation.",
+    "This report contains unverified risk leads produced by heuristic MVP rules. Potential impact is not confirmed exploitability. Validate each lead manually before disclosure or remediation.",
     "",
   ];
 
   if (result.findings.length === 0) {
-    lines.push("## Findings", "", "No potential Chainlink integration issues found by MVP rules.");
+    lines.push("## Risk Leads", "", "No Chainlink integration risk leads found by MVP rules.");
     return lines.join("\n");
   }
 
-  lines.push("## Findings", "");
+  lines.push("## Risk Leads", "");
   for (const finding of result.findings) {
     lines.push(
       `### ${finding.ruleId}: ${finding.title}`,
       "",
-      `- Severity: ${finding.severity}`,
-      `- Confidence: ${finding.confidence}`,
+      `- Potential impact: ${finding.severity}`,
+      `- Detection confidence: ${finding.confidence}`,
       `- Location: \`${finding.file}:${finding.line}\``,
       `- Manual review required: ${finding.manualReviewRequired ? "yes" : "no"}`,
+      `- Confirmed vulnerability: no`,
       "",
       "#### Description",
       "",

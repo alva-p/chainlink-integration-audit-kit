@@ -13,13 +13,15 @@ function sarifLevel(severity: Severity): "error" | "warning" | "note" {
 
 function resultMessage(finding: Finding): string {
   return [
+    `Unverified risk lead. Potential impact: ${finding.severity}. Detection confidence: ${finding.confidence}.`,
+    "",
     finding.description,
     "",
     `Risk: ${finding.risk}`,
     "",
     `Recommendation: ${finding.recommendation}`,
     "",
-    `Confidence: ${finding.confidence}. Manual review required: ${finding.manualReviewRequired ? "yes" : "no"}.`,
+    `Manual review required: ${finding.manualReviewRequired ? "yes" : "no"}. Confirmed vulnerability: no.`,
   ].join("\n");
 }
 
@@ -45,12 +47,12 @@ export function renderSarif(result: ScanResult): string {
                 text: rule.metadata.description,
               },
               help: {
-                text: `${rule.metadata.description}\n\nProduct: ${rule.metadata.product}. Severity: ${rule.metadata.severity}. Findings require manual review.`,
-                markdown: `${rule.metadata.description}\n\n**Product:** ${rule.metadata.product}\n\n**Severity:** ${rule.metadata.severity}\n\nFindings require manual review.`,
+                text: `${rule.metadata.description}\n\nProduct: ${rule.metadata.product}. Potential impact: ${rule.metadata.severity}. Results are unverified risk leads and require manual review.`,
+                markdown: `${rule.metadata.description}\n\n**Product:** ${rule.metadata.product}\n\n**Potential impact:** ${rule.metadata.severity}\n\nResults are unverified risk leads and require manual review.`,
               },
               properties: {
                 product: rule.metadata.product,
-                severity: rule.metadata.severity,
+                potentialImpact: rule.metadata.severity,
               },
             })),
           },
@@ -65,7 +67,7 @@ export function renderSarif(result: ScanResult): string {
               targetPath: result.targetPath,
               scannedFiles: result.scannedFiles,
               detectedProducts: result.products,
-              minimumSeverity: result.config.minSeverity,
+              minimumPotentialImpact: result.config.minSeverity,
               excludedPaths: result.config.exclude,
             },
           },
@@ -92,10 +94,11 @@ export function renderSarif(result: ScanResult): string {
               },
             ],
             properties: {
-              severity: finding.severity,
-              confidence: finding.confidence,
+              potentialImpact: finding.severity,
+              detectionConfidence: finding.confidence,
               product: metadata?.product,
               manualReviewRequired: finding.manualReviewRequired,
+              confirmedVulnerability: false,
             },
           };
         }),

@@ -1,6 +1,6 @@
 # Rule Catalog
 
-All MVP findings are potential issues and require manual review.
+All MVP results are unverified risk leads and require manual review. Potential impact is not confirmed exploitability.
 
 The default config excludes common noisy directories: `test/`, `tests/`, `mock/`, `mocks/`, `script/`, and `lib/`.
 
@@ -8,7 +8,7 @@ Supported report formats are `text`, `json`, `markdown`, `html`, and `sarif`.
 
 ## Data Feeds
 
-| Rule ID | Severity | Title |
+| Rule ID | Potential Impact | Title |
 | --- | --- | --- |
 | CL-DF-001 | Medium | Potential `latestRoundData()` use without freshness/staleness validation |
 | CL-DF-002 | High | Potential missing positive answer check |
@@ -17,17 +17,19 @@ Supported report formats are `text`, `json`, `markdown`, `html`, and `sarif`.
 
 ## CCIP
 
-| Rule ID | Severity | Title |
+| Rule ID | Potential Impact | Title |
 | --- | --- | --- |
 | CL-CCIP-001 | High | Potential `_ccipReceive` use without source chain validation |
 | CL-CCIP-002 | High | Potential `_ccipReceive` use without sender validation |
 | CL-CCIP-003 | High | Receiver does not appear to validate router/msg.sender |
 | CL-CCIP-004 | Medium | Potential unsafe payload decoding or missing defensive checks |
 | CL-CCIP-005 | Medium | Potential tightly coupled receiver business logic without graceful failure path |
+| CL-CCIP-006 | Medium | Potential `destTokenAmounts` indexing without length check |
+| CL-CCIP-007 | Medium | Potential mutating receiver logic without `messageId` idempotency tracking |
 
 ## VRF
 
-| Rule ID | Severity | Title |
+| Rule ID | Potential Impact | Title |
 | --- | --- | --- |
 | CL-VRF-001 | High | Potential `fulfillRandomWords` use without requestId tracking |
 | CL-VRF-002 | Medium | Potential callback reverts or excessive business logic |
@@ -35,7 +37,7 @@ Supported report formats are `text`, `json`, `markdown`, `html`, and `sarif`.
 
 ## Automation
 
-| Rule ID | Severity | Title |
+| Rule ID | Potential Impact | Title |
 | --- | --- | --- |
 | CL-AUTO-001 | High | Potential `performUpkeep` use without condition revalidation |
 | CL-AUTO-002 | Medium | Potential stale `performData` trust |
@@ -43,7 +45,7 @@ Supported report formats are `text`, `json`, `markdown`, `html`, and `sarif`.
 
 ## Functions / CRE
 
-| Rule ID | Severity | Title |
+| Rule ID | Potential Impact | Title |
 | --- | --- | --- |
 | CL-FN-001 | Info | Chainlink Functions usage detected; consider adding migration note to CRE |
 | CL-FN-002 | Medium | Potential unsafe secrets or external API assumptions |

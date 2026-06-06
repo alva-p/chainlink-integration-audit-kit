@@ -22,13 +22,14 @@ function findingCard(finding: Finding): string {
             <h3>${escapeHtml(finding.title)}</h3>
           </div>
           <div class="badges">
-            <span class="badge severity">${escapeHtml(finding.severity)}</span>
-            <span class="badge confidence">${escapeHtml(finding.confidence)} confidence</span>
+            <span class="badge severity">${escapeHtml(finding.severity)} potential impact</span>
+            <span class="badge confidence">${escapeHtml(finding.confidence)} detection confidence</span>
           </div>
         </header>
         <dl class="meta">
           <div><dt>Location</dt><dd>${escapeHtml(finding.file)}:${finding.line}</dd></div>
           <div><dt>Manual Review</dt><dd>${finding.manualReviewRequired ? "Required" : "Optional"}</dd></div>
+          <div><dt>Confirmed Vulnerability</dt><dd>No</dd></div>
         </dl>
         <section>
           <h4>Description</h4>
@@ -51,7 +52,7 @@ export function renderHtml(result: ScanResult): string {
   const generatedAt = new Date().toISOString();
   const findings = result.findings.length > 0
     ? result.findings.map(findingCard).join("\n")
-    : '<section class="empty">No potential Chainlink integration issues found by MVP rules. Manual review still required.</section>';
+    : '<section class="empty">No Chainlink integration risk leads found by MVP rules. Manual review still required.</section>';
 
   return `<!doctype html>
 <html lang="en">
@@ -331,22 +332,23 @@ export function renderHtml(result: ScanResult): string {
     <header class="hero">
       <p class="eyebrow">Chainlink Audit Kit</p>
       <h1>Chainlink Integration Audit Report</h1>
-      <p class="subtitle">Potential Chainlink integration risks detected by heuristic MVP rules. Findings require manual review and are not confirmed vulnerabilities.</p>
+      <p class="subtitle">Unverified Chainlink integration risk leads detected by heuristic MVP rules. Potential impact is not confirmed exploitability.</p>
     </header>
 
     <section class="summary" aria-label="Scan summary">
       <div class="summary-card"><span>Target</span><strong>${escapeHtml(result.targetPath)}</strong></div>
       <div class="summary-card"><span>Solidity Files</span><strong>${result.scannedFiles}</strong></div>
       <div class="summary-card"><span>Products</span><strong>${escapeHtml(products)}</strong></div>
-      <div class="summary-card"><span>Findings</span><strong>${result.findings.length}</strong></div>
-      <div class="summary-card"><span>Minimum Severity</span><strong>${escapeHtml(result.config.minSeverity)}</strong></div>
+      <div class="summary-card"><span>Unverified Leads</span><strong>${result.findings.length}</strong></div>
+      <div class="summary-card"><span>Confirmed Vulnerabilities</span><strong>0</strong></div>
+      <div class="summary-card"><span>Minimum Potential Impact</span><strong>${escapeHtml(result.config.minSeverity)}</strong></div>
       <div class="summary-card"><span>Excluded Paths</span><strong>${escapeHtml(excludedPaths)}</strong></div>
     </section>
 
-    <p class="note">This report is designed for audit triage. Validate each lead against source code, deployment configuration, and protocol assumptions before disclosure or remediation.</p>
+    <p class="note">This report is designed for audit triage. Validate each lead against source code, deployment configuration, and protocol assumptions before disclosure or remediation. High potential impact does not mean a confirmed or exploitable vulnerability.</p>
 
     <section>
-      <h2>Findings</h2>
+      <h2>Risk Leads</h2>
       <div class="findings">
 ${findings}
       </div>

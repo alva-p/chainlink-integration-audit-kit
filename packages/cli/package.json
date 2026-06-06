@@ -1,7 +1,7 @@
 {
   "name": "chainlink-audit",
-  "version": "0.2.0",
-  "description": "Security CLI for detecting potential Chainlink integration risks in Solidity repositories.",
+  "version": "0.3.0",
+  "description": "Security review CLI for flagging unverified Chainlink integration risk leads in Solidity repositories.",
   "license": "MIT",
   "type": "module",
   "keywords": [
