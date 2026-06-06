@@ -223,6 +223,113 @@ describe("scanPath", () => {
     );
   });
 
+  it("does not flag CCIP receiver interfaces as application receivers", async () => {
+    const dir = await fixture({
+      "IAny2EVMMessageReceiver.sol": `
+        interface IAny2EVMMessageReceiver {
+          function ccipReceive(Client.Any2EVMMessage calldata message) external;
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.products).toContain("ccip");
+    expect(result.findings.map((finding) => finding.ruleId)).not.toEqual(
+      expect.arrayContaining(["CL-CCIP-001", "CL-CCIP-002", "CL-CCIP-003"]),
+    );
+  });
+
+  it("recognizes delegated CCIP validation in receiver libraries", async () => {
+    const dir = await fixture({
+      "modules/CcipReceiverModule.sol": `
+        import "../storage/CrossChain.sol";
+
+        contract CcipReceiverModule is IAny2EVMMessageReceiver {
+          function ccipReceive(Client.Any2EVMMessage memory message) external {
+            CrossChain.processCcipReceive(CrossChain.load(), message);
+          }
+        }
+      `,
+      "storage/CrossChain.sol": `
+        library CrossChain {
+          error NotCcipRouter(address);
+          error UnsupportedNetwork(uint64);
+          struct Data {
+            address ccipRouter;
+            mapping(uint64 => uint64) ccipSelectorToChainId;
+            SupportedNetworks supportedNetworks;
+          }
+          struct SupportedNetworks {
+            uint256 length;
+          }
+          function load() internal pure returns (Data storage crossChain) {}
+          function processCcipReceive(Data storage self, Client.Any2EVMMessage memory data) internal {
+            if (msg.sender != address(self.ccipRouter)) {
+              revert NotCcipRouter(msg.sender);
+            }
+            uint64 sourceChainId = self.ccipSelectorToChainId[data.sourceChainSelector];
+            if (sourceChainId == 0) {
+              revert UnsupportedNetwork(sourceChainId);
+            }
+            address sender = abi.decode(data.sender, (address));
+            if (sender != address(this)) {
+              revert Unauthorized(sender);
+            }
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+    const ruleIds = result.findings.map((finding) => finding.ruleId);
+
+    expect(ruleIds).not.toContain("CL-CCIP-001");
+    expect(ruleIds).not.toContain("CL-CCIP-002");
+    expect(ruleIds).not.toContain("CL-CCIP-003");
+  });
+
+  it("recognizes router validation from CCIPReceiver inheritance with multiple bases", async () => {
+    const dir = await fixture({
+      "UpgradeableReceiver.sol": `
+        contract UpgradeableReceiver is Initializable, Ownable, CCIPReceiverUpgradeable {
+          function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
+            address sender = abi.decode(message.sender, (address));
+            if (sender != trustedSender[message.sourceChainSelector]) revert Unauthorized();
+            token.mint(receiver, 1 ether);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((finding) => finding.ruleId)).not.toContain("CL-CCIP-003");
+  });
+
+  it("recognizes router validation in public ccipReceive before internal handling", async () => {
+    const dir = await fixture({
+      "GuardedReceiver.sol": `
+        contract GuardedReceiver {
+          address public router;
+          function ccipReceive(Client.Any2EVMMessage calldata message) external {
+            if (msg.sender != router) revert InvalidRouter();
+            _ccipReceive(message);
+          }
+          function _ccipReceive(Client.Any2EVMMessage calldata message) internal {
+            address sender = abi.decode(message.sender, (address));
+            if (sender != trustedSender[message.sourceChainSelector]) revert Unauthorized();
+            credited[sender] += 1;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((finding) => finding.ruleId)).not.toContain("CL-CCIP-003");
+  });
+
   it("detects CCIP token amount indexing without length checks", async () => {
     const dir = await fixture({
       "TokenReceiver.sol": `

@@ -1,8 +1,8 @@
-import type { Rule } from "../types.js";
+import type { RepoSignals, Rule } from "../types.js";
 import { countMatches, extractFunctionBody, firstLineMatching, makeFinding } from "./helpers.js";
 
 function ccipBody(content: string): string {
-  return extractFunctionBody(content, "_ccipReceive") || extractFunctionBody(content, "ccipReceive");
+  return [extractFunctionBody(content, "ccipReceive"), extractFunctionBody(content, "_ccipReceive")].filter(Boolean).join("\n");
 }
 
 function ccipHeader(content: string): string {
@@ -16,14 +16,38 @@ function hasCcipReceiver(content: string): boolean {
 
 function isCcipBaseReceiver(content: string): boolean {
   return (
+    /interface\s+\w*I?Any2EVMMessageReceiver\b/.test(content) ||
+    /interface\s+\w+\s*{[\s\S]*function\s+ccipReceive\b[^{]*;/.test(content) ||
     /abstract\s+contract\s+\w*CCIPReceiver\b/.test(content) ||
     /function\s+_ccipReceive\b[^{;]*internal[^{;]*virtual\s*;/.test(content)
   );
 }
 
+function inheritsCcipReceiver(content: string): boolean {
+  return /\bis\s+[\s\S{]*\bCCIPReceiver(Upgradeable)?\b/.test(content);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function delegatedCcipContent(body: string, repoSignals: RepoSignals): string {
+  const match = /\b([A-Z][A-Za-z0-9_]*)\s*\.\s*([A-Za-z0-9_]*ccipReceive|processCcipReceive)\s*\(/i.exec(body);
+  if (!match) return body;
+
+  const [, libraryOrContractName, functionName] = match;
+  const typePattern = new RegExp(`\\b(library|contract)\\s+${escapeRegExp(libraryOrContractName)}\\b`);
+  const functionPattern = new RegExp(`\\bfunction\\s+${escapeRegExp(functionName)}\\b`);
+  const delegate = repoSignals.files.find((file) => typePattern.test(file.content) && functionPattern.test(file.content));
+
+  return delegate ? `${body}\n${delegate.content}` : body;
+}
+
 function validatesSourceChain(content: string, body: string): boolean {
   const header = ccipHeader(content);
-  const directValidation = /sourceChainSelector/.test(body) && /(require|revert|allowed|trusted|allowlist)/i.test(body);
+  const directValidation =
+    /(sourceChainSelector|ccipSelectorToChainId)/.test(body) &&
+    /(require|revert|allowed|trusted|allowlist|supportedNetworks|UnsupportedNetwork)/i.test(body);
   const modifierValidation =
     /(validChain|allowlisted|allowlist|trusted|onlyAllowlisted)[^{;]*(sourceChainSelector|\.sourceChainSelector)/i.test(
       header,
@@ -34,7 +58,9 @@ function validatesSourceChain(content: string, body: string): boolean {
 
 function validatesSourceSender(content: string, body: string): boolean {
   const header = ccipHeader(content);
-  const directValidation = /(message\.sender|sender)/.test(body) && /(require|revert|allowed|trusted|allowlist)/i.test(body);
+  const directValidation =
+    /(message\.sender|data\.sender|sender)/.test(body) &&
+    /(require|revert|allowed|trusted|allowlist|Unauthorized)/i.test(body);
   const modifierValidation =
     /(validSender|trustedSender|allowlistedSender|onlyAllowlisted|allowlisted|allowlist|trusted)[^{;]*(message\.sender|\.sender|sender)/i.test(
       header,
@@ -80,7 +106,8 @@ export const ccipRules: Rule[] = [
       if (!hasCcipReceiver(context.content)) return [];
       if (isCcipBaseReceiver(context.content)) return [];
       const body = ccipBody(context.content) || context.content;
-      if (validatesSourceChain(context.content, body)) return [];
+      const validationContent = `${ccipHeader(context.content)}\n${delegatedCcipContent(body, context.repoSignals)}`;
+      if (validatesSourceChain(context.content, validationContent)) return [];
       return [
         makeFinding({
           context,
@@ -108,7 +135,8 @@ export const ccipRules: Rule[] = [
       if (!hasCcipReceiver(context.content)) return [];
       if (isCcipBaseReceiver(context.content)) return [];
       const body = ccipBody(context.content) || context.content;
-      if (validatesSourceSender(context.content, body)) return [];
+      const validationContent = `${ccipHeader(context.content)}\n${delegatedCcipContent(body, context.repoSignals)}`;
+      if (validatesSourceSender(context.content, validationContent)) return [];
       return [
         makeFinding({
           context,
@@ -135,8 +163,13 @@ export const ccipRules: Rule[] = [
     scan(context) {
       if (!hasCcipReceiver(context.content)) return [];
       if (isCcipBaseReceiver(context.content)) return [];
-      const validatesRouter = /msg\.sender\s*(!=|==)\s*(router|s_router|i_router|address\(router\))|InvalidRouter|onlyRouter/i.test(context.content);
-      if (validatesRouter || /is\s+CCIPReceiver/.test(context.content)) return [];
+      const body = ccipBody(context.content) || context.content;
+      const validationContent = `${ccipHeader(context.content)}\n${delegatedCcipContent(body, context.repoSignals)}`;
+      const validatesRouter =
+        /msg\.sender\s*(!=|==)\s*(router|s_router|i_router|address\(router\))|InvalidRouter|onlyRouter|NotCcipRouter|_msgSender\(\)\s*!=\s*address\([^)]*ccipRouter/i.test(
+          validationContent,
+        );
+      if (validatesRouter || inheritsCcipReceiver(context.content)) return [];
       return [
         makeFinding({
           context,
