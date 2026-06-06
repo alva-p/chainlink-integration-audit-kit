@@ -2,150 +2,64 @@
 
 [![npm version](https://img.shields.io/npm/v/chainlink-audit.svg)](https://www.npmjs.com/package/chainlink-audit)
 [![CI](https://github.com/alva-p/chainlink-integration-audit-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/alva-p/chainlink-integration-audit-kit/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/alva-p/chainlink-integration-audit-kit)](https://github.com/alva-p/chainlink-integration-audit-kit/releases/tag/v0.1.0)
 
-Security CLI for Chainlink-powered smart contracts.
-
-Scan Solidity repositories for potential risky integration patterns across Chainlink Data Feeds, CCIP, VRF, Automation, and Functions/CRE.
-
-```bash
-npm install -g chainlink-audit
-chainlink-audit init
-chainlink-audit scan .
-chainlink-audit scan . --format markdown --out chainlink-report.md
-chainlink-audit scan . --format html --out chainlink-report.html
-chainlink-audit scan . --format sarif --out chainlink-report.sarif
-chainlink-audit triage chainlink-report.json --out triage.md
-```
-
-The CLI detects likely Chainlink product usage and reports unverified risk leads. Results require manual review and are not confirmed vulnerabilities.
+Security CLI for Chainlink-powered Solidity contracts. Scans repositories for risky integration patterns across Data Feeds, CCIP, VRF, Automation, and Functions/CRE and surfaces unverified risk leads for manual review.
 
 ## Install
 
 ```bash
 npm install -g chainlink-audit
-chainlink-audit version
-```
-
-Published package: [`chainlink-audit`](https://www.npmjs.com/package/chainlink-audit)
-
-GitHub releases: [chainlink-integration-audit-kit/releases](https://github.com/alva-p/chainlink-integration-audit-kit/releases)
-
-## What It Detects
-
-- stale or incomplete Chainlink Data Feed validation
-- missing CCIP source chain, sender, or router validation
-- CCIP token amount indexing assumptions
-- unsafe VRF request and fulfillment tracking
-- Automation upkeep revalidation issues
-- Chainlink Functions migration and external API assumptions
-- Data Streams-related code signals
-
-## Install From Source
-
-```bash
-git clone https://github.com/alva-p/chainlink-integration-audit-kit.git
-cd chainlink-integration-audit-kit
-npm install
-npm run build
-node packages/cli/dist/index.js version
-```
-
-During local development, run:
-
-```bash
-node packages/cli/dist/index.js init
-node packages/cli/dist/index.js scan examples
 ```
 
 ## Usage
 
 ```bash
-chainlink-audit scan <path>
-chainlink-audit scan <path> --format text
-chainlink-audit scan <path> --format json
-chainlink-audit scan <path> --format markdown --out chainlink-report.md
-chainlink-audit scan <path> --format html --out chainlink-report.html
-chainlink-audit scan <path> --format sarif --out chainlink-report.sarif
-chainlink-audit scan <path> --min-severity medium
-chainlink-audit triage chainlink-report.json --out triage.md
-chainlink-audit init
-chainlink-audit rules
-chainlink-audit version
+chainlink-audit scan .                                        # text output
+chainlink-audit scan . --format markdown --out report.md     # markdown
+chainlink-audit scan . --format html --out report.html       # HTML report
+chainlink-audit scan . --format sarif --out report.sarif     # SARIF (CI)
+chainlink-audit scan . --min-severity medium                 # filter by severity
+chainlink-audit triage report.json --out triage.md          # review checklist
+chainlink-audit rules                                        # list all rules
+chainlink-audit init                                         # create config file
 ```
 
-Local repository examples:
+## What It Detects
 
-```bash
-node packages/cli/dist/index.js scan examples --format text
-node packages/cli/dist/index.js scan examples --format json
-node packages/cli/dist/index.js scan examples --format markdown --out chainlink-report.md
-node packages/cli/dist/index.js scan examples --format html --out chainlink-report.html
-node packages/cli/dist/index.js scan examples --format sarif --out chainlink-report.sarif
-node packages/cli/dist/index.js triage chainlink-report.json --out triage.md
-```
+| Product | Rules | Examples |
+|---|---|---|
+| **CCIP** | 10 | Missing source chain / sender / router validation, unsafe payload decoding, Token Pool validator bypass |
+| **Data Feeds** | 4 | Stale price, missing validity checks, hardcoded addresses |
+| **VRF** | 3 | Untracked requests, missing fulfillment guard, weak randomness use |
+| **Automation** | 3 | Missing `performUpkeep` revalidation, selector mismatch |
+| **Functions/CRE** | 2 | Hardcoded secrets, inline source assumptions |
 
 ## Example Output
 
-### HTML Report
-
-![Chainlink Audit Kit HTML report dark mode](docs/assets/html-report-dark.png)
-
-Generate it with:
-
-```bash
-chainlink-audit scan . --format html --out chainlink-report.html
 ```
-
-### Text Report
-
-```text
 Chainlink Integration Audit Kit
-Target: examples
+Target: .
 Solidity files scanned: 11
-Detected Chainlink products: automation, ccip, data-feeds, vrf
-Minimum potential impact: low
-Excluded paths: test/, tests/, mock/, mocks/, script/, lib/
+Detected Chainlink products: ccip, data-feeds, vrf
 Unverified leads: 14
 
 [HIGH POTENTIAL IMPACT] CL-CCIP-001 - Potential CCIP receive without source chain validation
   Detection confidence: medium
-  Location: examples/ccip/vulnerable/VulnerableCCIPReceiver.sol:11
-  Description: Potential issue: messages from unexpected source chains may be accepted.
+  Location: src/Receiver.sol:28
   Risk: Cross-chain spoofing or misrouted messages can trigger unauthorized state changes.
-  Recommendation: Validate message.sourceChainSelector against an explicit allowlist before decoding payloads or mutating state.
+  Recommendation: Validate message.sourceChainSelector against an explicit allowlist.
   Manual review required: yes
-  Confirmed vulnerability: no
 ```
 
-## How To Interpret Findings
-
-Every result is an unverified risk lead. The scanner uses simple pattern matching and deliberately avoids claiming confirmed exploitation. Auditors should validate each lead by reading source, checking deployment assumptions, and adding tests where appropriate.
-
-SARIF output is generated locally only. Uploading SARIF to GitHub Code Scanning is optional and should be enabled by the repository owner according to their GitHub plan and security settings.
-
-Fields include:
-
-- `ruleId`: stable rule identifier.
-- `severity`: potential impact if the lead is real. This does not mean exploitability is confirmed.
-- `confidence`: detection confidence based on available patterns.
-- `file` and `line`: source location for review.
-- `title`, `description`, `risk`, `recommendation`: report-ready finding context.
-- `manualReviewRequired`: always true for MVP findings.
-
-Use `chainlink-audit triage <report.json>` to convert JSON output into a manual review checklist with false-positive, accepted-risk, and needs-context status fields.
-
-False positives are expected, especially in abstract base contracts, mocks, tests, and code with custom validation helpers.
+![HTML report](docs/assets/html-report-dark.png)
 
 ## Configuration
-
-Create a config file:
 
 ```bash
 chainlink-audit init
 ```
 
-Default `.chainlink-audit.json`:
+Creates `.chainlink-audit.json` in the project root:
 
 ```json
 {
@@ -155,52 +69,29 @@ Default `.chainlink-audit.json`:
 }
 ```
 
-The scanner reads `.chainlink-audit.json` from the scan target or a parent directory. CLI flags override config values for that run.
+CLI flags override config values for that run.
 
-## Examples
+## Interpreting Results
 
-The `examples/` directory contains minimal vulnerable and fixed Foundry examples for:
+Every finding is an **unverified risk lead**, not a confirmed vulnerability. Severity reflects potential impact if the lead is real. False positives are expected in abstract base contracts, mocks, and code with custom validation patterns.
 
-- Data Feed stale price handling.
-- CCIP receiver source/sender/router validation.
-- VRF request tracking.
-- Automation `performUpkeep` revalidation.
+Use `chainlink-audit triage <report.json>` to generate a manual review checklist with status fields for each lead.
 
-Run:
+## Install From Source
 
 ```bash
-forge test
-npm run scan:examples
+git clone https://github.com/alva-p/chainlink-integration-audit-kit.git
+cd chainlink-integration-audit-kit
+npm install && npm run build
+node packages/cli/dist/index.js scan examples
 ```
-
-## Documentation
-
-- `docs/rules.md`: MVP rule catalog.
-- `docs/data-feeds-checklist.md`
-- `docs/ccip-checklist.md`
-- `docs/vrf-checklist.md`
-- `docs/automation-checklist.md`
-- `docs/disclosure-policy.md`
-- `docs/audit-report-template.md`
-- `SECURITY.md`: responsible disclosure and tool security policy.
-
-## Disclosure Policy
-
-If the CLI helps identify a potential issue in a live protocol, follow that protocol's security policy or bug bounty process. Do not publish exploit details before maintainers have had reasonable time to respond. See `SECURITY.md` and `docs/disclosure-policy.md`.
 
 ## Limitations
 
-- No full Solidity AST or dataflow analysis in the MVP.
-- No live feed address validation.
-- No RPC calls or deployed contract checks.
+- Pattern matching only — no AST or dataflow analysis.
+- No RPC calls or live contract state checks.
 - No proof of exploitability.
-- Data Streams support is currently product detection only, with deeper rules planned.
 
-## Roadmap
+## Security
 
-- AST-based rule engine.
-- `chainlink-audit ci` helper.
-- richer `chainlink-audit triage` workflows.
-- Data Streams verification rules.
-- Optional RPC-aware checks for feed addresses, heartbeats, and network assumptions.
-- HTML report polish and templates.
+See [`SECURITY.md`](SECURITY.md) and [`docs/disclosure-policy.md`](docs/disclosure-policy.md).
