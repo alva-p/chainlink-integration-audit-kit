@@ -15,12 +15,21 @@ function hasCcipReceiver(content: string): boolean {
 }
 
 function isCcipBaseReceiver(content: string): boolean {
-  return (
-    /interface\s+\w*I?Any2EVMMessageReceiver\b/.test(content) ||
-    /interface\s+\w+\s*{[\s\S]*function\s+ccipReceive\b[^{]*;/.test(content) ||
-    /abstract\s+contract\s+\w*CCIPReceiver\b/.test(content) ||
-    /function\s+_ccipReceive\b[^{;]*internal[^{;]*virtual\s*;/.test(content)
-  );
+  if (/interface\s+\w*I?Any2EVMMessageReceiver\b/.test(content)) return true;
+  if (/interface\s+\w+\s*{[\s\S]*function\s+ccipReceive\b[^{]*;/.test(content)) return true;
+  if (/abstract\s+contract\s+\w*CCIPReceiver\b/.test(content)) return true;
+  if (/function\s+_ccipReceive\b[^{;]*internal[^{;]*virtual\s*;/.test(content)) return true;
+  // Guard stub: ccipReceive body is only a revert — intentional "not a receiver" pattern (e.g. EVM2EVMOffRamp)
+  const ccipReceiveBody = extractFunctionBody(content, "ccipReceive");
+  if (ccipReceiveBody) {
+    const bodyTrimmed = ccipReceiveBody.trim();
+    if (
+      /^\s*revert\s*\(\s*\)\s*;\s*$/.test(bodyTrimmed) ||
+      /^\s*revert\s+\w[\w.]*\s*\([^)]*\)\s*;\s*$/.test(bodyTrimmed)
+    )
+      return true;
+  }
+  return false;
 }
 
 function inheritsCcipReceiver(content: string): boolean {
@@ -29,6 +38,21 @@ function inheritsCcipReceiver(content: string): boolean {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractParentNames(content: string): string[] {
+  const match = /\bcontract\s+\w+\s+is\s+([\w\s,]+?)(?:\{|$)/m.exec(content);
+  if (!match) return [];
+  return match[1].split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function inheritsViaCcipReceiver(content: string, repoSignals: RepoSignals): boolean {
+  const parents = extractParentNames(content);
+  return parents.some((parent) => {
+    const parentPattern = new RegExp(`\\b(?:abstract\\s+)?contract\\s+${escapeRegExp(parent)}\\b`);
+    const parentFile = repoSignals.files.find((f) => parentPattern.test(f.content));
+    return parentFile ? inheritsCcipReceiver(parentFile.content) : false;
+  });
 }
 
 function delegatedCcipContent(body: string, repoSignals: RepoSignals): string {
@@ -43,10 +67,20 @@ function delegatedCcipContent(body: string, repoSignals: RepoSignals): string {
   return delegate ? `${body}\n${delegate.content}` : body;
 }
 
+function stripEmitLines(body: string): string {
+  return body
+    .split("\n")
+    .filter((line) => !/\bemit\b/.test(line))
+    .join("\n");
+}
+
 function validatesSourceChain(content: string, body: string): boolean {
   const header = ccipHeader(content);
+  // Strip event emissions before checking: sourceChainSelector that only appears in emit
+  // calls (e.g. for logging) must not suppress the finding.
+  const bodyWithoutEmits = stripEmitLines(body);
   const directValidation =
-    /(sourceChainSelector|ccipSelectorToChainId)/.test(body) &&
+    /(sourceChainSelector|ccipSelectorToChainId)/.test(bodyWithoutEmits) &&
     /(require|revert|allowed|trusted|allowlist|supportedNetworks|UnsupportedNetwork)/i.test(body);
   const modifierValidation =
     /(validChain|allowlisted|allowlist|trusted|onlyAllowlisted)[^{;]*(sourceChainSelector|\.sourceChainSelector)/i.test(
@@ -58,8 +92,11 @@ function validatesSourceChain(content: string, body: string): boolean {
 
 function validatesSourceSender(content: string, body: string): boolean {
   const header = ccipHeader(content);
+  // Strip event emissions before checking: sender that only appears in emit
+  // calls must not suppress the finding.
+  const bodyWithoutEmits = stripEmitLines(body);
   const directValidation =
-    /(message\.sender|data\.sender|sender)/.test(body) &&
+    /(message\.sender|data\.sender|sender)/.test(bodyWithoutEmits) &&
     /(require|revert|allowed|trusted|allowlist|Unauthorized)/i.test(body);
   const modifierValidation =
     /(validSender|trustedSender|allowlistedSender|onlyAllowlisted|allowlisted|allowlist|trusted)[^{;]*(message\.sender|\.sender|sender)/i.test(
@@ -91,6 +128,28 @@ function hasMessageIdTracking(content: string, body: string): boolean {
   return /(processed|received|executed|consumed|handled|seen|replay|duplicate|messageDetail|failedMessages|messageIdTo)/i.test(
     content,
   );
+}
+
+function hasTokenPoolSender(content: string): boolean {
+  return (
+    /function\s+lockOrBurn\b/.test(content) &&
+    /(Pool\.LockOrBurnInV1|LockOrBurnInV1|is\s+[\w\s,]*TokenPool)/.test(content)
+  );
+}
+
+function hasTokenPoolReceiver(content: string): boolean {
+  return (
+    /function\s+releaseOrMint\b/.test(content) &&
+    /(Pool\.ReleaseOrMintInV1|ReleaseOrMintInV1|is\s+[\w\s,]*TokenPool)/.test(content)
+  );
+}
+
+function isTokenPoolBase(content: string): boolean {
+  if (/abstract\s+contract\s+\w*TokenPool\b/.test(content)) return true;
+  if (/interface\s+\w*(TokenPool|IPool)\b/.test(content)) return true;
+  // Abstract contracts that inherit from a TokenPool base (e.g. BurnMintTokenPoolAbstract is BurnMintTokenPool)
+  if (/abstract\s+contract\s+\w+\s+is\s+[\w\s,]*TokenPool\b/.test(content)) return true;
+  return false;
 }
 
 export const ccipRules: Rule[] = [
@@ -169,7 +228,7 @@ export const ccipRules: Rule[] = [
         /msg\.sender\s*(!=|==)\s*(router|s_router|i_router|address\(router\))|InvalidRouter|onlyRouter|NotCcipRouter|_msgSender\(\)\s*!=\s*address\([^)]*ccipRouter/i.test(
           validationContent,
         );
-      if (validatesRouter || inheritsCcipReceiver(context.content)) return [];
+      if (validatesRouter || inheritsCcipReceiver(context.content) || inheritsViaCcipReceiver(context.content, context.repoSignals)) return [];
       return [
         makeFinding({
           context,
@@ -310,6 +369,95 @@ export const ccipRules: Rule[] = [
           description: "Potential issue: repeated or retried CCIP messages may execute mutating business logic more than once.",
           risk: "Without idempotency tracking, replay-like operational scenarios or manual execution flows can duplicate state changes.",
           recommendation: "Track processed messageId values or design receiver logic to be explicitly idempotent before mutating state.",
+        }),
+      ];
+    },
+  },
+  {
+    metadata: {
+      ruleId: "CL-CCIP-008",
+      product: "ccip",
+      severity: "high",
+      title: "Potential CCIP Token Pool lockOrBurn without _validateLockOrBurn",
+      description: "lockOrBurn override does not appear to call _validateLockOrBurn.",
+    },
+    scan(context) {
+      if (!hasTokenPoolSender(context.content)) return [];
+      if (isTokenPoolBase(context.content)) return [];
+      const body = extractFunctionBody(context.content, "lockOrBurn");
+      if (!body) return [];
+      if (/_validateLockOrBurn\s*\(/.test(body)) return [];
+      return [
+        makeFinding({
+          context,
+          ruleId: this.metadata.ruleId,
+          severity: this.metadata.severity,
+          confidence: "medium",
+          line: firstLineMatching(context.lines, /function\s+lockOrBurn\b/),
+          title: this.metadata.title,
+          description: "Potential issue: lockOrBurn may skip rate limit and chain allowlist enforcement.",
+          risk: "Omitting _validateLockOrBurn bypasses CCIP-enforced rate limits and supported-chain checks, enabling unrestricted token locking or burning.",
+          recommendation: "Call _validateLockOrBurn(lockOrBurnIn) at the start of every lockOrBurn override before executing custom logic.",
+        }),
+      ];
+    },
+  },
+  {
+    metadata: {
+      ruleId: "CL-CCIP-009",
+      product: "ccip",
+      severity: "high",
+      title: "Potential CCIP Token Pool releaseOrMint without _validateReleaseOrMint",
+      description: "releaseOrMint override does not appear to call _validateReleaseOrMint.",
+    },
+    scan(context) {
+      if (!hasTokenPoolReceiver(context.content)) return [];
+      if (isTokenPoolBase(context.content)) return [];
+      const body = extractFunctionBody(context.content, "releaseOrMint");
+      if (!body) return [];
+      if (/_validateReleaseOrMint\s*\(/.test(body)) return [];
+      return [
+        makeFinding({
+          context,
+          ruleId: this.metadata.ruleId,
+          severity: this.metadata.severity,
+          confidence: "medium",
+          line: firstLineMatching(context.lines, /function\s+releaseOrMint\b/),
+          title: this.metadata.title,
+          description: "Potential issue: releaseOrMint may skip offRamp caller verification and rate limit enforcement.",
+          risk: "Omitting _validateReleaseOrMint allows arbitrary callers to trigger token minting or release, bypassing CCIP trust boundaries.",
+          recommendation: "Call _validateReleaseOrMint(releaseOrMintIn) at the start of every releaseOrMint override before minting or releasing tokens.",
+        }),
+      ];
+    },
+  },
+  {
+    metadata: {
+      ruleId: "CL-CCIP-010",
+      product: "ccip",
+      severity: "medium",
+      title: "Potential unsafe CCIP Token Pool sourcePoolData decoding",
+      description: "releaseOrMint decodes sourcePoolData without obvious defensive checks.",
+    },
+    scan(context) {
+      if (!hasTokenPoolReceiver(context.content)) return [];
+      if (isTokenPoolBase(context.content)) return [];
+      const body = extractFunctionBody(context.content, "releaseOrMint");
+      if (!body) return [];
+      if (!/abi\.decode\s*\(\s*(?:releaseOrMintIn\.)?sourcePoolData/.test(body)) return [];
+      const defensiveChecks = /(sourcePoolData\.length|try\s+this|catch|InvalidSourcePoolData|InvalidPayload|schema|version)/i.test(body);
+      if (defensiveChecks) return [];
+      return [
+        makeFinding({
+          context,
+          ruleId: this.metadata.ruleId,
+          severity: this.metadata.severity,
+          confidence: "low",
+          line: firstLineMatching(context.lines, /abi\.decode\s*\(\s*(?:releaseOrMintIn\.)?sourcePoolData/),
+          title: this.metadata.title,
+          description: "Potential issue: malformed or unexpected sourcePoolData may cause releaseOrMint to revert and block token delivery.",
+          risk: "If sourcePoolData schema changes across an upgrade or pool version, decoding failures can permanently brick in-flight transfers.",
+          recommendation: "Validate sourcePoolData length or schema before decoding, or isolate decode failures so they can be handled without reverting the entire transfer.",
         }),
       ];
     },

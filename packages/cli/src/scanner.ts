@@ -96,7 +96,7 @@ function detectProducts(files: Array<{ file: string; content: string }>): Set<Ch
   const allContent = files.map((file) => file.content).join("\n");
 
   if (/(AggregatorV3Interface|latestRoundData|IChainlinkAggregator)/.test(allContent)) products.add("data-feeds");
-  if (/(CCIPReceiver|Any2EVMMessage|IRouterClient|_ccipReceive|ccipReceive|sourceChainSelector)/.test(allContent)) products.add("ccip");
+  if (/(CCIPReceiver|Any2EVMMessage|IRouterClient|_ccipReceive|ccipReceive|sourceChainSelector|TokenPool|LockOrBurnInV1|ReleaseOrMintInV1|_validateLockOrBurn|_validateReleaseOrMint)/.test(allContent)) products.add("ccip");
   if (/(VRFConsumerBase|VRFCoordinator|fulfillRandomWords|requestRandomWords)/.test(allContent)) products.add("vrf");
   if (/(AutomationCompatibleInterface|KeeperCompatibleInterface|checkUpkeep|performUpkeep)/.test(allContent)) products.add("automation");
   if (/(FunctionsClient|FunctionsRequest|DONHostedSecrets|sendRequest|fulfillRequest)/i.test(allContent)) products.add("functions-cre");

@@ -38,6 +38,9 @@ describe("rules metadata", () => {
         "CL-CCIP-005",
         "CL-CCIP-006",
         "CL-CCIP-007",
+        "CL-CCIP-008",
+        "CL-CCIP-009",
+        "CL-CCIP-010",
         "CL-VRF-001",
         "CL-VRF-002",
         "CL-VRF-003",
@@ -174,6 +177,44 @@ describe("scanPath", () => {
     );
   });
 
+  it("does not suppress CCIP-001 when sourceChainSelector only appears in event emissions", async () => {
+    const dir = await fixture({
+      "Receiver.sol": `
+        contract Receiver is CCIPReceiver {
+          event Received(uint64 sourceChainSelector);
+          function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
+            emit Received(message.sourceChainSelector);
+            if (someCondition) revert InvalidAction();
+            (address account) = abi.decode(message.data, (address));
+            token.mint(account, 1 ether);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-CCIP-001");
+  });
+
+  it("does not suppress CCIP-002 when sender only appears inside an emit call", async () => {
+    const dir = await fixture({
+      "Receiver.sol": `
+        contract Receiver is CCIPReceiver {
+          function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
+            emit MessageReceived(message.sender, message.sourceChainSelector);
+            if (someOtherCondition) revert InvalidAction();
+            token.mint(fixedRecipient, 1 ether);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-CCIP-002");
+  });
+
   it("recognizes CCIP source validation in entrypoint modifiers", async () => {
     const dir = await fixture({
       "Receiver.sol": `
@@ -289,6 +330,30 @@ describe("scanPath", () => {
     expect(ruleIds).not.toContain("CL-CCIP-003");
   });
 
+  it("recognizes router validation from transitive CCIPReceiver inheritance via parent contract", async () => {
+    const dir = await fixture({
+      "BaseVault.sol": `
+        abstract contract BaseVault is Pausable, CCIPReceiver {
+          constructor(address router) CCIPReceiver(router) {}
+        }
+      `,
+      "ChildVault.sol": `
+        import "./BaseVault.sol";
+        contract ChildVault is BaseVault, IChildVault {
+          function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
+            address sender = abi.decode(message.sender, (address));
+            if (sender != trustedSender[message.sourceChainSelector]) revert Unauthorized();
+            token.mint(receiver, 1 ether);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((finding) => finding.ruleId)).not.toContain("CL-CCIP-003");
+  });
+
   it("recognizes router validation from CCIPReceiver inheritance with multiple bases", async () => {
     const dir = await fixture({
       "UpgradeableReceiver.sol": `
@@ -385,6 +450,122 @@ describe("scanPath", () => {
     const result = await scanPath(dir);
 
     expect(result.findings.map((finding) => finding.ruleId)).not.toContain("CL-CCIP-007");
+  });
+
+  it("detects CCIP Token Pool lockOrBurn without _validateLockOrBurn", async () => {
+    const dir = await fixture({
+      "BurnMintPool.sol": `
+        contract BurnMintPool is TokenPool {
+          function lockOrBurn(Pool.LockOrBurnInV1 calldata lockOrBurnIn) external returns (Pool.LockOrBurnOutV1 memory) {
+            IToken(address(i_token)).burn(address(this), lockOrBurnIn.amount);
+            return Pool.LockOrBurnOutV1({ destTokenAddress: getRemoteToken(lockOrBurnIn.remoteChainSelector), destPoolData: "" });
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.products).toContain("ccip");
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("CL-CCIP-008");
+  });
+
+  it("detects CCIP Token Pool releaseOrMint without _validateReleaseOrMint", async () => {
+    const dir = await fixture({
+      "BurnMintPool.sol": `
+        contract BurnMintPool is TokenPool {
+          function releaseOrMint(Pool.ReleaseOrMintInV1 calldata releaseOrMintIn) external returns (Pool.ReleaseOrMintOutV1 memory) {
+            IToken(address(i_token)).mint(releaseOrMintIn.receiver, releaseOrMintIn.amount);
+            return Pool.ReleaseOrMintOutV1({ destinationAmount: releaseOrMintIn.amount });
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.products).toContain("ccip");
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("CL-CCIP-009");
+  });
+
+  it("does not flag Token Pool when both validators are present", async () => {
+    const dir = await fixture({
+      "SafePool.sol": `
+        contract SafePool is TokenPool {
+          function lockOrBurn(Pool.LockOrBurnInV1 calldata lockOrBurnIn) external returns (Pool.LockOrBurnOutV1 memory) {
+            _validateLockOrBurn(lockOrBurnIn);
+            IToken(address(i_token)).burn(address(this), lockOrBurnIn.amount);
+            return Pool.LockOrBurnOutV1({ destTokenAddress: getRemoteToken(lockOrBurnIn.remoteChainSelector), destPoolData: "" });
+          }
+          function releaseOrMint(Pool.ReleaseOrMintInV1 calldata releaseOrMintIn) external returns (Pool.ReleaseOrMintOutV1 memory) {
+            _validateReleaseOrMint(releaseOrMintIn);
+            IToken(address(i_token)).mint(releaseOrMintIn.receiver, releaseOrMintIn.amount);
+            return Pool.ReleaseOrMintOutV1({ destinationAmount: releaseOrMintIn.amount });
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+    const ruleIds = result.findings.map((finding) => finding.ruleId);
+
+    expect(ruleIds).not.toContain("CL-CCIP-008");
+    expect(ruleIds).not.toContain("CL-CCIP-009");
+  });
+
+  it("detects unsafe sourcePoolData decoding in releaseOrMint", async () => {
+    const dir = await fixture({
+      "RebasePool.sol": `
+        contract RebasePool is TokenPool {
+          function releaseOrMint(Pool.ReleaseOrMintInV1 calldata releaseOrMintIn) external returns (Pool.ReleaseOrMintOutV1 memory) {
+            _validateReleaseOrMint(releaseOrMintIn);
+            uint256 rate = abi.decode(releaseOrMintIn.sourcePoolData, (uint256));
+            IToken(address(i_token)).mint(releaseOrMintIn.receiver, releaseOrMintIn.amount, rate);
+            return Pool.ReleaseOrMintOutV1({ destinationAmount: releaseOrMintIn.amount });
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("CL-CCIP-010");
+  });
+
+  it("does not flag abstract Token Pool base with non-standard name (e.g. BurnMintTokenPoolAbstract)", async () => {
+    const dir = await fixture({
+      "BurnMintTokenPoolAbstract.sol": `
+        abstract contract BurnMintTokenPoolAbstract is BurnMintTokenPool {
+          function lockOrBurn(Pool.LockOrBurnInV1 calldata lockOrBurnIn) external virtual returns (Pool.LockOrBurnOutV1 memory);
+          function releaseOrMint(Pool.ReleaseOrMintInV1 calldata releaseOrMintIn) external virtual returns (Pool.ReleaseOrMintOutV1 memory);
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+    const ruleIds = result.findings.map((f) => f.ruleId);
+
+    expect(ruleIds).not.toContain("CL-CCIP-008");
+    expect(ruleIds).not.toContain("CL-CCIP-009");
+  });
+
+  it("does not flag ccipReceive that is a pure revert stub (e.g. EVM2EVMOffRamp guard)", async () => {
+    const dir = await fixture({
+      "OffRamp.sol": `
+        contract EVM2EVMOffRamp {
+          function ccipReceive(Client.Any2EVMMessage calldata) external pure {
+            revert();
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+    const ruleIds = result.findings.map((f) => f.ruleId);
+
+    expect(ruleIds).not.toContain("CL-CCIP-001");
+    expect(ruleIds).not.toContain("CL-CCIP-002");
+    expect(ruleIds).not.toContain("CL-CCIP-003");
   });
 
   it("detects VRF leads", async () => {
