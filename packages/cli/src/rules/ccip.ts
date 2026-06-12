@@ -1,9 +1,11 @@
 import type { RepoSignals, Rule } from "../types.js";
-import { countMatches, extractFunctionBody, firstLineMatching, makeFinding } from "./helpers.js";
+import { countMatches, escapeRegExp, extractBlockBody, extractFunctionBody, firstLineMatching, makeFinding } from "./helpers.js";
 
 function ccipBody(content: string): string {
   return [extractFunctionBody(content, "ccipReceive"), extractFunctionBody(content, "_ccipReceive")].filter(Boolean).join("\n");
 }
+
+const CCIP_RECEIVE_DECL = /function\s+(_ccipReceive|ccipReceive)\b/;
 
 function ccipHeader(content: string): string {
   const match = /function\s+(_ccipReceive|ccipReceive)\b[^{;]*/.exec(content);
@@ -36,10 +38,6 @@ function inheritsCcipReceiver(content: string): boolean {
   return /\bis\s+[\s\S{]*\bCCIPReceiver(Upgradeable)?\b/.test(content);
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function extractParentNames(content: string): string[] {
   const match = /\bcontract\s+\w+\s+is\s+([\w\s,]+?)(?:\{|$)/m.exec(content);
   if (!match) return [];
@@ -65,6 +63,48 @@ function delegatedCcipContent(body: string, repoSignals: RepoSignals): string {
   const delegate = repoSignals.files.find((file) => typePattern.test(file.content) && functionPattern.test(file.content));
 
   return delegate ? `${body}\n${delegate.content}` : body;
+}
+
+function extractModifierNames(header: string): string[] {
+  const afterParams = header.replace(/^function\s+\w+\s*\([^)]*\)/s, "");
+  const names = afterParams.match(/\b[A-Za-z_]\w*\b/g) ?? [];
+  const keywords = new Set([
+    "external",
+    "public",
+    "internal",
+    "private",
+    "view",
+    "pure",
+    "payable",
+    "override",
+    "virtual",
+    "returns",
+  ]);
+  return [...new Set(names)].filter((name) => !keywords.has(name));
+}
+
+function resolveModifierBodies(content: string, repoSignals: RepoSignals): string {
+  const header = ccipHeader(content);
+  const modifierNames = extractModifierNames(header);
+  if (modifierNames.length === 0) return "";
+
+  const parents = extractParentNames(content);
+  const parentFiles = repoSignals.files.filter((file) =>
+    parents.some((parent) => new RegExp(`\\b(?:abstract\\s+)?contract\\s+${escapeRegExp(parent)}\\b`).test(file.content)),
+  );
+  const candidateFiles = [{ content }, ...parentFiles];
+
+  return modifierNames
+    .map((name) => {
+      const declaration = new RegExp(`modifier\\s+${escapeRegExp(name)}\\b`);
+      for (const file of candidateFiles) {
+        const body = extractBlockBody(file.content, declaration);
+        if (body) return body;
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 function stripEmitLines(body: string): string {
@@ -165,7 +205,7 @@ export const ccipRules: Rule[] = [
       if (!hasCcipReceiver(context.content)) return [];
       if (isCcipBaseReceiver(context.content)) return [];
       const body = ccipBody(context.content) || context.content;
-      const validationContent = `${ccipHeader(context.content)}\n${delegatedCcipContent(body, context.repoSignals)}`;
+      const validationContent = `${ccipHeader(context.content)}\n${delegatedCcipContent(body, context.repoSignals)}\n${resolveModifierBodies(context.content, context.repoSignals)}`;
       if (validatesSourceChain(context.content, validationContent)) return [];
       return [
         makeFinding({
@@ -173,7 +213,7 @@ export const ccipRules: Rule[] = [
           ruleId: this.metadata.ruleId,
           severity: this.metadata.severity,
           confidence: "medium",
-          line: firstLineMatching(context.lines, /(_ccipReceive|ccipReceive)/),
+          line: firstLineMatching(context.lines, CCIP_RECEIVE_DECL),
           title: this.metadata.title,
           description: "Potential issue: messages from unexpected source chains may be accepted.",
           risk: "Cross-chain spoofing or misrouted messages can trigger unauthorized state changes.",
@@ -194,7 +234,7 @@ export const ccipRules: Rule[] = [
       if (!hasCcipReceiver(context.content)) return [];
       if (isCcipBaseReceiver(context.content)) return [];
       const body = ccipBody(context.content) || context.content;
-      const validationContent = `${ccipHeader(context.content)}\n${delegatedCcipContent(body, context.repoSignals)}`;
+      const validationContent = `${ccipHeader(context.content)}\n${delegatedCcipContent(body, context.repoSignals)}\n${resolveModifierBodies(context.content, context.repoSignals)}`;
       if (validatesSourceSender(context.content, validationContent)) return [];
       return [
         makeFinding({
@@ -202,7 +242,7 @@ export const ccipRules: Rule[] = [
           ruleId: this.metadata.ruleId,
           severity: this.metadata.severity,
           confidence: "medium",
-          line: firstLineMatching(context.lines, /(_ccipReceive|ccipReceive)/),
+          line: firstLineMatching(context.lines, CCIP_RECEIVE_DECL),
           title: this.metadata.title,
           description: "Potential issue: messages from untrusted source contracts may be accepted.",
           risk: "An attacker may spoof business instructions if sender validation is missing or incomplete.",
@@ -235,7 +275,7 @@ export const ccipRules: Rule[] = [
           ruleId: this.metadata.ruleId,
           severity: this.metadata.severity,
           confidence: "medium",
-          line: firstLineMatching(context.lines, /(ccipReceive|_ccipReceive)/),
+          line: firstLineMatching(context.lines, CCIP_RECEIVE_DECL),
           title: this.metadata.title,
           description: "Potential issue: direct calls to the receiver may bypass CCIP router trust assumptions.",
           risk: "If the entrypoint is public/external and router validation is absent, fabricated messages may be processed.",
@@ -259,6 +299,9 @@ export const ccipRules: Rule[] = [
       if (!/abi\.decode\s*\(\s*message\.data/.test(body)) return [];
       const defensiveChecks = /(message\.data\.length|try\s+this|catch|InvalidPayload|Payload|version|schema)/i.test(body);
       if (defensiveChecks) return [];
+      // A trusted, validated sender already constrains the payload to the expected schema.
+      const validationContent = `${ccipHeader(context.content)}\n${delegatedCcipContent(body, context.repoSignals)}\n${resolveModifierBodies(context.content, context.repoSignals)}`;
+      if (validatesSourceSender(context.content, validationContent)) return [];
       return [
         makeFinding({
           context,
@@ -296,7 +339,7 @@ export const ccipRules: Rule[] = [
           ruleId: this.metadata.ruleId,
           severity: this.metadata.severity,
           confidence: "low",
-          line: firstLineMatching(context.lines, /(_ccipReceive|ccipReceive)/),
+          line: firstLineMatching(context.lines, CCIP_RECEIVE_DECL),
           title: this.metadata.title,
           description: "Potential issue: receiver business logic appears coupled to CCIP execution without a visible retry/manual path.",
           risk: "A revert in message handling may require manual execution or leave cross-chain state inconsistent.",
@@ -364,7 +407,7 @@ export const ccipRules: Rule[] = [
           ruleId: this.metadata.ruleId,
           severity: this.metadata.severity,
           confidence: "low",
-          line: firstLineMatching(context.lines, /(_ccipReceive|ccipReceive)/),
+          line: firstLineMatching(context.lines, CCIP_RECEIVE_DECL),
           title: this.metadata.title,
           description: "Potential issue: repeated or retried CCIP messages may execute mutating business logic more than once.",
           risk: "Without idempotency tracking, replay-like operational scenarios or manual execution flows can duplicate state changes.",

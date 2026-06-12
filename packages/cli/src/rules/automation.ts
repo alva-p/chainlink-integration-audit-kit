@@ -1,8 +1,19 @@
 import type { Rule } from "../types.js";
-import { extractFunctionBody, firstLineMatching, makeFinding } from "./helpers.js";
+import { escapeRegExp, extractFunctionBody, firstLineMatching, makeFinding } from "./helpers.js";
 
 function hasAutomation(content: string): boolean {
   return /(AutomationCompatibleInterface|KeeperCompatibleInterface|function\s+checkUpkeep\b|function\s+performUpkeep\b)/.test(content);
+}
+
+function internalCallBodies(content: string, body: string): string {
+  const calledNames = [...body.matchAll(/\b([a-zA-Z_]\w*)\s*\(/g)].map((match) => match[1]);
+  return [...new Set(calledNames)]
+    .map((name) => {
+      const declaration = new RegExp(`function\\s+${escapeRegExp(name)}\\b[^{;]*\\b(internal|private)\\b`);
+      return declaration.test(content) ? extractFunctionBody(content, name) : "";
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 export const automationRules: Rule[] = [
@@ -18,8 +29,9 @@ export const automationRules: Rule[] = [
       if (!hasAutomation(context.content)) return [];
       const body = extractFunctionBody(context.content, "performUpkeep");
       if (!body) return [];
-      const revalidates = /(require|revert|UpkeepNotNeeded|checkUpkeep)/.test(body) &&
-        /(block\.timestamp|lastExecutedAt|interval|upkeepNeeded|balance|paused)/.test(body);
+      const extendedBody = `${body}\n${internalCallBodies(context.content, body)}`;
+      const revalidates = /(require|revert|UpkeepNotNeeded|checkUpkeep)/.test(extendedBody) &&
+        /(block\.timestamp|lastExecutedAt|interval|upkeepNeeded|balance|paused)/.test(extendedBody);
       if (revalidates) return [];
       return [
         makeFinding({
@@ -76,7 +88,10 @@ export const automationRules: Rule[] = [
     scan(context) {
       if (!hasAutomation(context.content)) return [];
       if (!/function\s+performUpkeep\b/.test(context.content)) return [];
-      const hasPause = /(Pausable|whenNotPaused|paused|pause\(|emergency|guardian)/i.test(context.content);
+      const pausePattern =
+        /(Pausable|whenNotPaused|paused|unpause|pause\w*\s*\(|emergency|guardian|abort\w*\s*\(|dismantle|kill\w*\s*\(|circuitBreak)/i;
+      const hasPause =
+        pausePattern.test(context.content) || context.repoSignals.files.some((file) => pausePattern.test(file.content));
       if (hasPause) return [];
       return [
         makeFinding({

@@ -7,3 +7,7 @@ packages/cli/dist/
 *.log
 *.tgz
 .DS_Store
+
+# Internal audit notes — may reference private findings from third-party repos
+finding.md
+mejoras.md

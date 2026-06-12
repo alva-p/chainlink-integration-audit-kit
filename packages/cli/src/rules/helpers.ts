@@ -9,8 +9,12 @@ export function hasAny(content: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(content));
 }
 
-export function extractFunctionBody(content: string, functionName: string): string {
-  const match = new RegExp(`function\\s+${functionName}\\b`).exec(content);
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function extractBlockBody(content: string, declarationPattern: RegExp): string {
+  const match = declarationPattern.exec(content);
   if (!match) return "";
 
   const open = content.indexOf("{", match.index);
@@ -25,6 +29,10 @@ export function extractFunctionBody(content: string, functionName: string): stri
   }
 
   return content.slice(open + 1);
+}
+
+export function extractFunctionBody(content: string, functionName: string): string {
+  return extractBlockBody(content, new RegExp(`function\\s+${functionName}\\b`));
 }
 
 export function countMatches(content: string, patterns: RegExp[]): number {

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.3.2 - 2026-06-12
+
+Rule accuracy improvements driven by a benchmark run against real-world CCIP
+integrations from the Chainlink ecosystem:
+
+- CL-CCIP-001/002: resolve source chain/sender validation performed in modifiers
+  inherited from parent contracts in other files (e.g. Glacis-style adapters).
+- CL-CCIP-004: no longer flags payload decoding when the sender is already
+  validated, since a trusted sender constrains the payload schema.
+- CL-CCIP-001/002/003/005/007: finding locations now anchor on the
+  `_ccipReceive`/`ccipReceive` function declaration instead of the first
+  matching comment or NatSpec line.
+- CL-AUTO-001: follows internal/private helper calls from `performUpkeep`
+  before flagging missing condition revalidation.
+- CL-AUTO-003: pause/emergency-control detection is now repo-wide and
+  recognizes more circuit-breaker patterns (`pauseUpkeeps`, `abort*`,
+  `dismantle`, `circuitBreak`, `unpause`, etc.).
+- CL-DF-002: recognizes `<= 0` / `< 0` revert guards and generic
+  `Invalid*Price/Answer/Round` custom errors as a positive-answer check.
+
+## 0.3.1 - 2026-06-06
+
+- Fixed Token Pool base detection (`isTokenPoolBase`) to catch abstract
+  contracts inheriting from `TokenPool` under non-standard names (e.g.
+  `BurnMintTokenPoolAbstract is BurnMintTokenPool`), eliminating
+  CL-CCIP-008/009 false positives on base contracts.
+- `ccipReceive` bodies that are pure revert stubs (e.g. `EVM2EVMOffRamp` guard
+  pattern) are now recognized as non-receivers for CL-CCIP-001/002/003.
+
 ## 0.3.0 - 2026-06-06
 
 - Added honest risk-lead reporting language across text, Markdown, HTML, SARIF, and triage output.

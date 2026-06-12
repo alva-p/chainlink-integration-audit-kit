@@ -47,6 +47,10 @@ export const dataFeedRules: Rule[] = [
         /price\s*>\s*0/,
         /oracleAnswer\s*>\s*0/,
         /InvalidOracleAnswer/,
+        /answer\s*<=?\s*0/,
+        /price\s*<=?\s*0/,
+        /oracleAnswer\s*<=?\s*0/,
+        /Invalid(?:Oracle)?(?:Price|Answer|Round)/i,
       ]);
       if (hasPositiveAnswerCheck) return [];
 
