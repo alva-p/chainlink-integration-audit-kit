@@ -17,6 +17,17 @@ Results are heuristic risk leads for manual review, not confirmed vulnerabilitie
 
 Use `chainlink-audit triage <report.json>` to turn JSON scan output into a manual review checklist.
 
+## Ecosystem Benchmark
+
+The repository includes a pinned Chainlink Ecosystem benchmark manifest at `benchmarks/ecosystem-repos.json`.
+It tracks public GitHub repositories for Ecosystem projects outside the original manual audit sample.
+
+```bash
+npm run benchmark:ecosystem -- --out ../../cache/ecosystem-benchmark-report.json
+```
+
+The runner clones pinned commits into `../../cache/ecosystem-benchmark`, scans each checkout, and writes an aggregate JSON report with per-project and per-rule lead counts.
+
 Published package: https://www.npmjs.com/package/chainlink-audit
 
 See the repository README for full documentation:

@@ -1,0 +1,575 @@
+{
+  "source": "https://www.chainlinkecosystem.com/ecosystem",
+  "selectionDate": "2026-06-14",
+  "selectionCriteria": [
+    "Project has a Chainlink Ecosystem page.",
+    "Project has an accessible public GitHub Solidity repository.",
+    "Project is not part of the original seven-repository manual audit sample in mejoras.md.",
+    "Repository commit is pinned so benchmark runs can be compared over time."
+  ],
+  "previousManualAuditSample": [
+    "3-Gravita-SmartContracts",
+    "1-usdplus-contracts",
+    "1-tenbin-contracts",
+    "4-flashliquidity-portals",
+    "2-v1-core",
+    "4-flashliquidity-automation",
+    "2-sDOLA-CCIP"
+  ],
+  "repositories": [
+    {
+      "project": "Aave",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/aave",
+      "githubUrl": "https://github.com/aave/aave-v3-core.git",
+      "commit": "782f51917056a53a2c228701058a6c3fb233684a",
+      "scanPath": ".",
+      "ecosystemProducts": [
+        "data-feeds",
+        "any-api",
+        "ccip",
+        "svr",
+        "smartdata",
+        "ace",
+        "cre",
+        "automation"
+      ],
+      "notes": "Large DeFi protocol with several Chainlink products listed by the Ecosystem page."
+    },
+    {
+      "project": "GMX",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/gmx",
+      "githubUrl": "https://github.com/gmx-io/gmx-synthetics.git",
+      "commit": "919da1919d950c3e5218084ba9ef3a4a0da3de89",
+      "scanPath": ".",
+      "ecosystemProducts": [
+        "data-feeds",
+        "ccip",
+        "data-streams"
+      ],
+      "notes": "Perpetual exchange benchmark candidate for Data Streams and CCIP-related surface."
+    },
+    {
+      "project": "Synthetix",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/synthetix",
+      "githubUrl": "https://github.com/Synthetixio/synthetix-v3.git",
+      "commit": "23585f73c76d625b2a43aaf94dc440a8a1e7a8fa",
+      "scanPath": ".",
+      "ecosystemProducts": [
+        "any-api",
+        "ccip"
+      ],
+      "notes": "Derivatives protocol with CCIP listed by the Ecosystem page."
+    },
+    {
+      "project": "Compound",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/compound",
+      "githubUrl": "https://github.com/compound-finance/comet.git",
+      "commit": "db72b0ca39118098846605479d156ce9b1736cf3",
+      "scanPath": ".",
+      "ecosystemProducts": [
+        "data-feeds",
+        "ccip",
+        "svr"
+      ],
+      "notes": "Money-market benchmark candidate for oracle and CCIP integration leads."
+    },
+    {
+      "project": "Balancer",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/balancer",
+      "githubUrl": "https://github.com/balancer/balancer-v2-monorepo.git",
+      "commit": "f8b6f44f21afaf3c802536ed478277f945e7f256",
+      "scanPath": ".",
+      "ecosystemProducts": [
+        "data-feeds"
+      ],
+      "notes": "Large monorepo for checking scanner noise on mature DeFi code."
+    },
+    {
+      "project": "Euler",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/euler",
+      "githubUrl": "https://github.com/euler-xyz/euler-vault-kit.git",
+      "commit": "5b98b42048ba11ae82fb62dfec06d1010c8e41e6",
+      "scanPath": ".",
+      "ecosystemProducts": [
+        "data-feeds"
+      ],
+      "notes": "Lending protocol benchmark candidate for Data Feed patterns."
+    },
+    {
+      "project": "Liquity",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/liquity",
+      "githubUrl": "https://github.com/liquity/dev.git",
+      "commit": "3e64ee1b52c50d51587c64c1cf75e0ba82934979",
+      "scanPath": ".",
+      "ecosystemProducts": [
+        "data-feeds",
+        "any-api",
+        "ccip"
+      ],
+      "notes": "Borrowing protocol with both Data Feeds and CCIP listed by the Ecosystem page."
+    },
+    {
+      "project": "Frax Finance",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/frax-finance",
+      "githubUrl": "https://github.com/FraxFinance/frax-solidity.git",
+      "commit": "30532c8cefcbf5c7efafcff4369261bd435a4859",
+      "scanPath": ".",
+      "ecosystemProducts": [
+        "data-feeds",
+        "any-api",
+        "ccip"
+      ],
+      "notes": "Stablecoin and rollup ecosystem benchmark candidate with Data Feeds and CCIP listed."
+    },
+    {
+      "project": "Curve",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/curve",
+      "githubUrl": "https://github.com/curvefi/curve-contract.git",
+      "commit": "574f44027d089de0eac765f5a74ea5ae96aba968",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Trader Joe",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/trader-joe",
+      "githubUrl": "https://github.com/traderjoe-xyz/joe-core.git",
+      "commit": "5bec2f3d86500bfd81038c99afe702ee7e67af3e",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "BENQI",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/benqi",
+      "githubUrl": "https://github.com/Benqi-fi/BENQI-Smart-Contracts.git",
+      "commit": "e0cfd244726719dfe027c9740878d64d1cad98f2",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Alpaca Finance",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/alpaca-finance",
+      "githubUrl": "https://github.com/alpaca-finance/bsc-alpaca-contract.git",
+      "commit": "1e988886e21a2e79106d85d3eb16ef55f4fcc834",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Beefy Finance",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/beefy-finance",
+      "githubUrl": "https://github.com/beefyfinance/beefy-contracts.git",
+      "commit": "bffcd00132e4cb23b5efcfb3ec7cadf4941e0a9e",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Pendle",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/pendle",
+      "githubUrl": "https://github.com/pendle-finance/pendle-core-v2-public.git",
+      "commit": "fdcfe39ed7b45717f0e6e286581bdcf96bb2f9ce",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Notional Finance",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/notional-finance",
+      "githubUrl": "https://github.com/notional-finance/contracts-v3.git",
+      "commit": "ae20d99ebfb0b14cf7b08421722b85849fb11edf",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Lyra",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/lyra",
+      "githubUrl": "https://github.com/lyra-finance/lyra-protocol.git",
+      "commit": "ea9e36abae3a4ed789e84bf2d4e385bbb01e13a8",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Premia",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/premia",
+      "githubUrl": "https://github.com/Premian-Labs/premia-contracts.git",
+      "commit": "0ed54a91c6b69b17a8cc9d6208aadb442218a07f",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Radiant Capital",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/radiant-capital",
+      "githubUrl": "https://github.com/radiant-capital/v2.git",
+      "commit": "cd618877151896415705468f1b2a43c4b75b3c5b",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Dolomite",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/dolomite",
+      "githubUrl": "https://github.com/dolomite-exchange/dolomite-margin-modules.git",
+      "commit": "f6e14330a7e63aa5e7d1578c8fb2ee17efbc50c5",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "dForce",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/dforce",
+      "githubUrl": "https://github.com/dforce-network/LendingContractsV2.git",
+      "commit": "55da73310d196849213da2e2357572afdb6d663a",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Reserve",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/reserve",
+      "githubUrl": "https://github.com/reserve-protocol/protocol.git",
+      "commit": "879b0e955de3aa82b5b9f06c532429087ce7feea",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Morpho",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/morpho",
+      "githubUrl": "https://github.com/morpho-org/morpho-blue.git",
+      "commit": "1478e9cfe1b4d514f80682b3b60e4e12ff3ee45a",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Gearbox",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/gearbox",
+      "githubUrl": "https://github.com/Gearbox-protocol/core-v3.git",
+      "commit": "b038597d9070d9fd18593a6ae9c3d28ca931bb73",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Huma Finance",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/huma-finance",
+      "githubUrl": "https://github.com/00labs/huma-contracts.git",
+      "commit": "8a90ad62f867db56f9ad703983864d15896fb946",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Ondo Finance",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/ondo-finance",
+      "githubUrl": "https://github.com/ondoprotocol/usdy.git",
+      "commit": "3912ca0698c2992e4db997d0855e62588c44e2c0",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "PoolTogether",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/pooltogether",
+      "githubUrl": "https://github.com/GenerationSoftware/pt-v5-prize-pool.git",
+      "commit": "fedd70f3b62086895ee4f0f2224f941e4cdb89b0",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Aavegotchi",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/aavegotchi",
+      "githubUrl": "https://github.com/aavegotchi/aavegotchi-contracts.git",
+      "commit": "301d04f5654536f20e4973b8cb5f5d56b5b69bec",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Rocket Pool",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/rocket-pool",
+      "githubUrl": "https://github.com/rocket-pool/rocketpool.git",
+      "commit": "fef41a4f7cf99d7d66313c0ba04deb8ba2dabf88",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "BarnBridge",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/barnbridge",
+      "githubUrl": "https://github.com/BarnBridge/BarnBridge-SmartYieldBonds.git",
+      "commit": "d55ddb1daa41f01921750fb1c87cf71d06746cb2",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Set Protocol",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/set-protocol",
+      "githubUrl": "https://github.com/SetProtocol/set-protocol-v2.git",
+      "commit": "63d6cf5d09fb5cccf5e8032be3e384c433f7ef35",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Perpetual Protocol",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/perpetual-protocol",
+      "githubUrl": "https://github.com/perpetual-protocol/perp-curie-contract.git",
+      "commit": "d520bd8e2c420a58fc8aab085a71165425047e80",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Inverse Finance",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/inverse-finance",
+      "githubUrl": "https://github.com/InverseFinance/FiRM.git",
+      "commit": "6cd9f06cd0da79ccaad9f663aed299ef3021af10",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Origin Protocol",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/origin-protocol",
+      "githubUrl": "https://github.com/OriginProtocol/origin-dollar.git",
+      "commit": "c6eeb562fb37c0437a0ba5af34574243304eacff",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "BadgerDAO",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/badgerdao",
+      "githubUrl": "https://github.com/Badger-Finance/badger-system.git",
+      "commit": "ddaff2f3d840809714b6de494c13968cbbde4404",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "LooksRare",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/looksrare",
+      "githubUrl": "https://github.com/LooksRare/contracts-exchange-v2.git",
+      "commit": "7fca5650da653a2a0680e18e60164e639c18f830",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Nexus Mutual",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/nexus-mutual",
+      "githubUrl": "https://github.com/NexusMutual/smart-contracts.git",
+      "commit": "9e885628e9049025bd625cc4cf02d7a981d5c338",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Rari Capital",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/rari-capital",
+      "githubUrl": "https://github.com/Rari-Capital/compound-protocol.git",
+      "commit": "ae4388e780a8d596d97619d9704a931a2752c2bc",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Tokemak",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/tokemak",
+      "githubUrl": "https://github.com/Tokemak/tokemak-smart-contracts-public.git",
+      "commit": "59315d3224825d884565b7d1b96b20c788be7129",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Reflexer",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/reflexer",
+      "githubUrl": "https://github.com/reflexer-labs/geb.git",
+      "commit": "1a59f16a377386c49f520006ed0f7fd9d128cb09",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Opyn",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/opyn",
+      "githubUrl": "https://github.com/opynfinance/GammaProtocol.git",
+      "commit": "841f81d9d05da9d27277b5775edfbb48c4012d2a",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Angle Protocol",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/angle-protocol",
+      "githubUrl": "https://github.com/AngleProtocol/angle-core.git",
+      "commit": "f41182f087fe5184359e0b66d1a3b3ebff1ba96f",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "QiDao",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/qidao",
+      "githubUrl": "https://github.com/0xlaozi/qidao.git",
+      "commit": "6f65acc401f649a50e15c4f9f197f37d7316419b",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Bancor",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/bancor",
+      "githubUrl": "https://github.com/bancorprotocol/contracts-v3.git",
+      "commit": "e927cb440fb3e7373d16f3aeb97f962452e22ad7",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "KyberSwap",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/kyberswap",
+      "githubUrl": "https://github.com/KyberNetwork/ks-elastic-sc.git",
+      "commit": "4ab08c0a60f74809f731bdd333076e32d05f1d17",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Cask Protocol",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/cask-protocol",
+      "githubUrl": "https://github.com/CaskProtocol/cask-contracts.git",
+      "commit": "aaf7f588d1631325838e7144f252b22a85f4aad4",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "StakeWise",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/stakewise",
+      "githubUrl": "https://github.com/stakewise/v3-core.git",
+      "commit": "31b2da5e9c729b00ead0db16369141608410bee8",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Aerodrome",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/aerodrome",
+      "githubUrl": "https://github.com/aerodrome-finance/contracts.git",
+      "commit": "1ba30815bba620f7e9faa34769ffd00c214c9b82",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Velodrome",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/velodrome",
+      "githubUrl": "https://github.com/velodrome-finance/contracts.git",
+      "commit": "b3065d8b6702b14b094f9f6046b752cc9f78c43b",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Polymarket",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/polymarket",
+      "githubUrl": "https://github.com/Polymarket/ctf-exchange.git",
+      "commit": "ed5c7708b7be3aa98bf5f0c6602b57cc498e2ef4",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Perennial",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/perennial",
+      "githubUrl": "https://github.com/equilibria-xyz/perennial-v2.git",
+      "commit": "99780561f7dc50257b79845cba649ca8f5add6ff",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Midas",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/midas",
+      "githubUrl": "https://github.com/midas-protocol/contracts.git",
+      "commit": "352be0e9ba2795e14d05a5fa4661cb2569655141",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "ACX",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/acx",
+      "githubUrl": "https://github.com/across-protocol/contracts.git",
+      "commit": "8ab073067de0c9cd4a5a560885815c80c31abf6a",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Jarvis Network",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/jarvis-network",
+      "githubUrl": "https://github.com/jarvis-network/synthereum.git",
+      "commit": "1ae3e4077ed39e1cecba45f7f3dbaee59fe4fda8",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Zora",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/zora",
+      "githubUrl": "https://github.com/ourzora/zora-protocol.git",
+      "commit": "5372d17270ee2338e462b0df2650ba400393ec80",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Scroll",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/scroll",
+      "githubUrl": "https://github.com/scroll-tech/scroll.git",
+      "commit": "1904f82a10c6337b8e3a47da0e9e50bf36b212d7",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Bonzo Finance",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/bonzo-finance",
+      "githubUrl": "https://github.com/Bonzo-Labs/bonzo-finance-contracts.git",
+      "commit": "38441b697a51c22bef6a9fb660bea46aa429c11c",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Iron Bank",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/iron-bank",
+      "githubUrl": "https://github.com/ibdotxyz/compound-protocol.git",
+      "commit": "6e1d3d350147d53834ca3cd6e9a068592f6e2654",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Size Credit",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/size-credit",
+      "githubUrl": "https://github.com/SizeCredit/size-solidity.git",
+      "commit": "c3fb2ceb65e05939f8e8ba46a34d43d26a3e485b",
+      "scanPath": ".",
+      "ecosystemProducts": [],
+      "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    }
+  ]
+}

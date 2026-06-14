@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.3 - 2026-06-14
+
+Rule accuracy improvements driven by a 58-repository Chainlink Ecosystem
+benchmark (`benchmarks/ecosystem-repos.json`), which cut total leads from 329
+to 276 (-16%) without losing any confirmed true positives:
+
+- CL-DF-001/002: contracts that themselves implement `latestRoundData()`
+  (price feed wrappers/adapters that pass through the underlying feed's
+  round data) are now treated as feed implementations, not consumers, and
+  are skipped — the freshness/positive-answer check is the responsibility of
+  their callers.
+- CL-DF-002: recognizes `answer/price/oracleAnswer >= 0` guards and
+  `aggregator.minAnswer()` lower-bound comparisons as a positive-answer check.
+- CL-AUTO-003 / CL-VRF-003: pure `interface` declarations (no contract or
+  library implementation in the file) are no longer flagged for missing
+  pause controls or request-state tracking, since interfaces contain no
+  logic to check.
+- CL-FN-002/003: `hasFunctions` detection no longer matches `sendRequest`/
+  `fulfillRequest` as substrings of unrelated identifiers (e.g.
+  `CCIPSendRequested`).
+- Scanner no longer aborts on broken symlinks (e.g. unresolved git
+  submodules) when collecting Solidity files.
+- Added `npm run benchmark:ecosystem` to scan the pinned 58-repository
+  Chainlink Ecosystem benchmark set and report per-rule lead counts.
+
 ## 0.3.2 - 2026-06-12
 
 Rule accuracy improvements driven by a benchmark run against real-world CCIP

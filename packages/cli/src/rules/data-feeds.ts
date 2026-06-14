@@ -1,6 +1,13 @@
 import type { Rule } from "../types.js";
 import { firstLineMatching, hasAny, makeFinding } from "./helpers.js";
 
+const AGGREGATOR_WRAPPER_PATTERN =
+  /function\s+latestRoundData\s*\([^)]*\)\s*(?:external|public|view|override|virtual|\s)*returns\s*\(\s*uint80\s*,\s*int256\s*,\s*uint256\s*,\s*uint256\s*,\s*uint80\s*\)\s*\{/s;
+
+function isAggregatorWrapper(content: string): boolean {
+  return AGGREGATOR_WRAPPER_PATTERN.test(content);
+}
+
 export const dataFeedRules: Rule[] = [
   {
     metadata: {
@@ -12,6 +19,7 @@ export const dataFeedRules: Rule[] = [
     },
     scan(context) {
       if (!/\.latestRoundData\s*\(/.test(context.content)) return [];
+      if (isAggregatorWrapper(context.content)) return [];
       const hasFreshnessCheck =
         /updatedAt/.test(context.content) &&
         /(block\.timestamp|maxStaleness|stale|heartbeat|updatedAt\s*!=\s*0)/i.test(context.content);
@@ -42,15 +50,17 @@ export const dataFeedRules: Rule[] = [
     },
     scan(context) {
       if (!/\.latestRoundData\s*\(/.test(context.content)) return [];
+      if (isAggregatorWrapper(context.content)) return [];
       const hasPositiveAnswerCheck = hasAny(context.content, [
-        /answer\s*>\s*0/,
-        /price\s*>\s*0/,
-        /oracleAnswer\s*>\s*0/,
+        /answer\s*>=?\s*0/,
+        /price\s*>=?\s*0/,
+        /oracleAnswer\s*>=?\s*0/,
         /InvalidOracleAnswer/,
         /answer\s*<=?\s*0/,
         /price\s*<=?\s*0/,
         /oracleAnswer\s*<=?\s*0/,
         /Invalid(?:Oracle)?(?:Price|Answer|Round)/i,
+        /\.\s*minAnswer\s*\(\s*\)/,
       ]);
       if (hasPositiveAnswerCheck) return [];
 

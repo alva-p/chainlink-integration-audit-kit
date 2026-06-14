@@ -1,5 +1,5 @@
 import type { Rule } from "../types.js";
-import { countMatches, extractFunctionBody, firstLineMatching, makeFinding } from "./helpers.js";
+import { countMatches, extractFunctionBody, firstLineMatching, isInterfaceOnlyFile, makeFinding } from "./helpers.js";
 
 function hasVrf(content: string): boolean {
   return /(VRFConsumerBase|VRFCoordinator|function\s+fulfillRandomWords\b|requestRandomWords)/.test(content);
@@ -76,6 +76,7 @@ export const vrfRules: Rule[] = [
     },
     scan(context) {
       if (!/requestRandomWords\s*\(/.test(context.content)) return [];
+      if (isInterfaceOnlyFile(context.content)) return [];
       const tracksBeforeFulfillment = /(pendingRequests|requestStatus|requests)\s*\[.*\]\s*=/.test(context.content);
       if (tracksBeforeFulfillment) return [];
       return [

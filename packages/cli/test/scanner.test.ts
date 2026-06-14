@@ -1,7 +1,9 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { summarizeBenchmarkResults, type EcosystemBenchmarkManifest } from "../src/benchmark.js";
 import { defaultConfig, loadConfig, writeDefaultConfig } from "../src/config.js";
 import { renderHtml } from "../src/reporters/html.js";
 import { renderMarkdown } from "../src/reporters/markdown.js";
@@ -10,6 +12,8 @@ import { renderText } from "../src/reporters/text.js";
 import { renderTriageMarkdown } from "../src/reporters/triage.js";
 import { rules } from "../src/rules/index.js";
 import { scanPath } from "../src/scanner.js";
+
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 async function fixture(files: Record<string, string>): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "chainlink-audit-"));
@@ -52,6 +56,74 @@ describe("rules metadata", () => {
         "CL-FN-003",
       ]),
     );
+  });
+});
+
+describe("ecosystem benchmark", () => {
+  it("tracks pinned Chainlink Ecosystem repositories outside the original manual audit sample", async () => {
+    const manifestPath = path.join(packageRoot, "benchmarks/ecosystem-repos.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as EcosystemBenchmarkManifest;
+    const repositories = manifest.repositories;
+    const projects = new Set(repositories.map((repository) => repository.project));
+    const githubUrls = new Set(repositories.map((repository) => repository.githubUrl));
+    const ecosystemProducts = new Set(repositories.flatMap((repository) => repository.ecosystemProducts));
+
+    expect(manifest.source).toBe("https://www.chainlinkecosystem.com/ecosystem");
+    expect(repositories.length).toBeGreaterThanOrEqual(58);
+    expect(projects.size).toBe(repositories.length);
+    expect(githubUrls.size).toBe(repositories.length);
+    expect([...ecosystemProducts]).toEqual(expect.arrayContaining(["data-feeds", "ccip", "automation", "data-streams"]));
+
+    for (const repository of repositories) {
+      expect(repository.ecosystemUrl).toMatch(/^https:\/\/www\.chainlinkecosystem\.com\/ecosystem\//);
+      expect(repository.githubUrl).toMatch(/^https:\/\/github\.com\/.+\/.+\.git$/);
+      expect(repository.commit).toMatch(/^[a-f0-9]{40}$/);
+      expect(repository.scanPath ?? ".").not.toContain("..");
+      expect(manifest.previousManualAuditSample).not.toContain(repository.project);
+    }
+  });
+
+  it("summarizes benchmark scan results by rule and product", () => {
+    const summary = summarizeBenchmarkResults([
+      {
+        project: "Aave",
+        githubUrl: "https://github.com/aave/aave-v3-core.git",
+        commit: "782f51917056a53a2c228701058a6c3fb233684a",
+        scannedFiles: 10,
+        scannerProducts: ["data-feeds", "ccip"],
+        totalFindings: 3,
+        findingsByRule: {
+          "CL-DF-001": 2,
+          "CL-CCIP-004": 1,
+        },
+      },
+      {
+        project: "GMX",
+        githubUrl: "https://github.com/gmx-io/gmx-synthetics.git",
+        commit: "919da1919d950c3e5218084ba9ef3a4a0da3de89",
+        scannedFiles: 4,
+        scannerProducts: ["data-streams"],
+        totalFindings: 1,
+        findingsByRule: {
+          "CL-DF-001": 1,
+        },
+      },
+    ]);
+
+    expect(summary).toEqual({
+      repositoryCount: 2,
+      scannedFiles: 14,
+      totalFindings: 4,
+      scannerProducts: ["ccip", "data-feeds", "data-streams"],
+      findingsByRule: {
+        "CL-DF-001": 3,
+        "CL-CCIP-004": 1,
+      },
+      findingsByProduct: {
+        "data-feeds": 3,
+        ccip: 1,
+      },
+    });
   });
 });
 
@@ -110,6 +182,25 @@ describe("scanPath", () => {
     expect(
       result.findings.every((finding) => finding.file.split(path.sep).join("/").includes("contracts/Feed.sol")),
     ).toBe(true);
+  });
+
+  it("skips broken symlinks while collecting Solidity files", async () => {
+    const dir = await fixture({
+      "contracts/Feed.sol": `
+        contract Feed {
+          function read() external view returns (uint256) {
+            (, int256 answer,,,) = feed.latestRoundData();
+            return uint256(answer);
+          }
+        }
+      `,
+    });
+    await symlink(path.join(dir, "missing-submodule"), path.join(dir, "lib"));
+
+    const result = await scanPath(dir);
+
+    expect(result.scannedFiles).toBe(1);
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("CL-DF-001");
   });
 
   it("loads project config and filters by minSeverity", async () => {

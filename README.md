@@ -77,6 +77,16 @@ Every finding is an **unverified risk lead**, not a confirmed vulnerability. Sev
 
 Use `chainlink-audit triage <report.json>` to generate a manual review checklist with status fields for each lead.
 
+## Ecosystem Benchmark
+
+The CLI package includes a pinned benchmark manifest for public repositories listed in the [Chainlink Ecosystem](https://www.chainlinkecosystem.com/ecosystem), excluding the original seven-repository manual audit sample.
+
+```bash
+npm -w packages/cli run benchmark:ecosystem -- --out ../../cache/ecosystem-benchmark-report.json
+```
+
+The runner clones pinned commits into `cache/ecosystem-benchmark`, scans each checkout, and writes aggregate per-project and per-rule lead counts.
+
 ## Install From Source
 
 ```bash

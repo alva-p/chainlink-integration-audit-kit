@@ -2,7 +2,7 @@ import type { Rule } from "../types.js";
 import { firstLineMatching, hasAny, makeFinding } from "./helpers.js";
 
 function hasFunctions(content: string): boolean {
-  return /(FunctionsClient|FunctionsRequest|sendRequest|fulfillRequest|DONHostedSecrets|sourceCode|secrets)/i.test(content);
+  return /(FunctionsClient|FunctionsRequest|\bsendRequest\s*\(|\bfulfillRequest\s*\(|DONHostedSecrets|sourceCode|secrets)/i.test(content);
 }
 
 export const functionsCreRules: Rule[] = [

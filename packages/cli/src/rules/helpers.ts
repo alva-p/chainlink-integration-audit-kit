@@ -39,6 +39,12 @@ export function countMatches(content: string, patterns: RegExp[]): number {
   return patterns.reduce((count, pattern) => count + (pattern.test(content) ? 1 : 0), 0);
 }
 
+export function isInterfaceOnlyFile(content: string): boolean {
+  const declarations = [...content.matchAll(/\b(?:abstract\s+)?(contract|library|interface)\s+\w+(?:\s+is\s+[^{]+)?\s*\{/g)];
+  if (declarations.length === 0) return false;
+  return declarations.every((match) => match[1] === "interface");
+}
+
 export function makeFinding(input: {
   context: RuleContext;
   ruleId: string;

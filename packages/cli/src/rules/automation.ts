@@ -1,5 +1,5 @@
 import type { Rule } from "../types.js";
-import { escapeRegExp, extractFunctionBody, firstLineMatching, makeFinding } from "./helpers.js";
+import { escapeRegExp, extractFunctionBody, firstLineMatching, isInterfaceOnlyFile, makeFinding } from "./helpers.js";
 
 function hasAutomation(content: string): boolean {
   return /(AutomationCompatibleInterface|KeeperCompatibleInterface|function\s+checkUpkeep\b|function\s+performUpkeep\b)/.test(content);
@@ -88,6 +88,7 @@ export const automationRules: Rule[] = [
     scan(context) {
       if (!hasAutomation(context.content)) return [];
       if (!/function\s+performUpkeep\b/.test(context.content)) return [];
+      if (isInterfaceOnlyFile(context.content)) return [];
       const pausePattern =
         /(Pausable|whenNotPaused|paused|unpause|pause\w*\s*\(|emergency|guardian|abort\w*\s*\(|dismantle|kill\w*\s*\(|circuitBreak)/i;
       const hasPause =

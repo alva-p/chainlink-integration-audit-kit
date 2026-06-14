@@ -74,7 +74,14 @@ async function collectSolidityFiles(
 ): Promise<string[]> {
   if (isExcluded(targetPath, scanRoot, config)) return [];
 
-  const stat = await fs.stat(targetPath);
+  let stat;
+  try {
+    stat = await fs.stat(targetPath);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+    if (code === "ENOENT" || code === "ELOOP") return [];
+    throw error;
+  }
   if (stat.isFile()) {
     if (!targetPath.endsWith(".sol")) return [];
     return [targetPath];
