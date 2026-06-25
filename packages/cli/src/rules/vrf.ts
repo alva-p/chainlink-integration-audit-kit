@@ -94,4 +94,41 @@ export const vrfRules: Rule[] = [
       ];
     },
   },
+  {
+    metadata: {
+      ruleId: "CL-VRF-004",
+      product: "vrf",
+      severity: "high",
+      title: "Potential VRF result discarding via redraw before fulfillment",
+      description: "A redraw mechanism can overwrite the pending requestId, allowing selective discard of unfavorable VRF results.",
+    },
+    scan(context) {
+      if (!/function\s+fulfillRandomWords\b/.test(context.content)) return [];
+      const fulfillBody = extractFunctionBody(context.content, "fulfillRandomWords") || context.content;
+      // fulfillRandomWords must reject mismatched requestIds for the attack to work
+      const rejectsStaleRequestId =
+        /(requestId\s*!=|!=\s*requestId|REQUEST_DOES_NOT_MATCH|currentChainlinkRequestId|currentRequestId|s_requestId)/i.test(
+          fulfillBody,
+        );
+      if (!rejectsStaleRequestId) return [];
+      // Has a function that can re-issue a VRF request, overwriting the pending one
+      const hasRedrawTrigger =
+        /function\s+(redraw|retry|reroll|cancelRequest|requestNewDraw|reset)\b/.test(context.content) ||
+        (context.content.match(/requestRandomWords\s*\(/g) ?? []).length > 1;
+      if (!hasRedrawTrigger) return [];
+      return [
+        makeFinding({
+          context,
+          ruleId: this.metadata.ruleId,
+          severity: this.metadata.severity,
+          confidence: "medium",
+          line: firstLineMatching(context.lines, /function\s+(redraw|retry|reroll|cancelRequest|requestNewDraw|reset)\b|requestRandomWords\s*\(/),
+          title: this.metadata.title,
+          description: "Potential issue: a privileged actor can call redraw() after the cooldown expires but before fulfillRandomWords arrives, discarding an unfavorable pending result.",
+          risk: "The raffle or randomness consumer can be rigged by intentionally underfunding the Chainlink subscription to delay fulfillment, then frontrunnning the callback with a redraw to selectively accept favorable outcomes.",
+          recommendation: "Enforce a redraw cooldown strictly greater than Chainlink's maximum fulfillment delay (25+ hours). Alternatively, lock redraws until fulfillRandomWords has been called for the current request.",
+        }),
+      ];
+    },
+  },
 ];

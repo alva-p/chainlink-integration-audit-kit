@@ -54,6 +54,13 @@ describe("rules metadata", () => {
         "CL-FN-001",
         "CL-FN-002",
         "CL-FN-003",
+        "CL-DF-005",
+        "CL-DF-006",
+        "CL-DF-007",
+        "CL-VRF-004",
+        "CL-DS-001",
+        "CL-DS-002",
+        "CL-DS-003",
       ]),
     );
   });
@@ -332,6 +339,37 @@ describe("scanPath", () => {
     expect(ruleIds).not.toContain("CL-CCIP-001");
     expect(ruleIds).not.toContain("CL-CCIP-002");
     expect(ruleIds).not.toContain("CL-CCIP-003");
+  });
+
+  it("does not flag CCIP receiver that delegates validation to this.processMessage() (Aave GHO pattern)", async () => {
+    const dir = await fixture({
+      "CcipBridge.sol": `
+        contract CcipBridge is CCIPReceiver {
+          mapping(uint64 => bytes) private _destinations;
+
+          function ccipReceive(Client.Any2EVMMessage calldata message) external override onlyRouter {
+            try this.processMessage(message) {} catch (bytes memory err) {
+              _failedMessages[message.messageId] = true;
+              emit BridgeMessageFailed(message.messageId, err);
+            }
+          }
+
+          function processMessage(Client.Any2EVMMessage calldata message) external onlySelf {
+            if (keccak256(_destinations[message.sourceChainSelector]) != keccak256(message.sender)) {
+              revert UnknownSourceDestination();
+            }
+            uint256 amount = message.destTokenAmounts[0].amount;
+            IERC20(TOKEN).safeTransfer(COLLECTOR, amount);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+    const ruleIds = result.findings.map((f) => f.ruleId);
+
+    expect(ruleIds).not.toContain("CL-CCIP-001");
+    expect(ruleIds).not.toContain("CL-CCIP-002");
   });
 
   it("does not flag abstract CCIP receiver base contracts as application receivers", async () => {
@@ -703,6 +741,187 @@ describe("scanPath", () => {
     );
   });
 
+  it("detects deprecated latestAnswer() usage (CL-DF-005)", async () => {
+    const dir = await fixture({
+      "PriceChecker.sol": `
+        contract PriceChecker {
+          IPrice public priceFeed;
+          function getPrice() external view returns (int256) {
+            int256 price = priceFeed.latestAnswer();
+            require(price > 0);
+            return price;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.products).toContain("data-feeds");
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-DF-005");
+    expect(result.findings.find((f) => f.ruleId === "CL-DF-005")).toHaveProperty("confidence", "high");
+  });
+
+  it("does not flag latestAnswer() in an aggregator wrapper (CL-DF-005)", async () => {
+    const dir = await fixture({
+      "FeedWrapper.sol": `
+        contract FeedWrapper {
+          function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+            int256 answer = underlying.latestAnswer();
+            return (0, answer, 0, block.timestamp, 0);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).not.toContain("CL-DF-005");
+  });
+
+  it("detects missing answeredInRound completeness check (CL-DF-006)", async () => {
+    const dir = await fixture({
+      "Oracle.sol": `
+        contract Oracle {
+          function getPrice() external view returns (uint256) {
+            (, int256 answer,, uint256 updatedAt,) = feed.latestRoundData();
+            require(updatedAt != 0);
+            require(block.timestamp - updatedAt <= maxStaleness);
+            require(answer > 0);
+            return uint256(answer);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-DF-006");
+  });
+
+  it("does not flag latestRoundData() when answeredInRound >= roundId is validated (CL-DF-006)", async () => {
+    const dir = await fixture({
+      "SafeOracle.sol": `
+        contract SafeOracle {
+          function getPrice() external view returns (uint256) {
+            (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) = feed.latestRoundData();
+            require(answeredInRound >= roundId, "stale round");
+            require(updatedAt != 0);
+            require(answer > 0);
+            return uint256(answer);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).not.toContain("CL-DF-006");
+  });
+
+  it("detects cached aggregator minAnswer/maxAnswer bounds (CL-DF-007)", async () => {
+    const dir = await fixture({
+      "DepositReceipt.sol": `
+        contract DepositReceipt {
+          int192 public tokenMinPrice;
+          int192 public tokenMaxPrice;
+          constructor(address priceFeed) {
+            IAccessControlledOffchainAggregator aggregator =
+              IAccessControlledOffchainAggregator(IAggregatorV3(priceFeed).aggregator());
+            tokenMinPrice = aggregator.minAnswer();
+            tokenMaxPrice = aggregator.maxAnswer();
+          }
+          function getOraclePrice() external view returns (uint256) {
+            (, int256 answer,,,) = priceFeed.latestRoundData();
+            require(int192(answer) >= tokenMinPrice && int192(answer) <= tokenMaxPrice);
+            return uint256(int256(answer));
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-DF-007");
+  });
+
+  it("does not flag aggregator bounds read dynamically each call (CL-DF-007)", async () => {
+    const dir = await fixture({
+      "DynamicOracle.sol": `
+        contract DynamicOracle {
+          function getOraclePrice(address priceFeed) external view returns (uint256) {
+            IAccessControlledOffchainAggregator aggregator =
+              IAccessControlledOffchainAggregator(IAggregatorV3(priceFeed).aggregator());
+            int192 minAnswer = aggregator.minAnswer();
+            int192 maxAnswer = aggregator.maxAnswer();
+            (, int256 answer,, uint256 updatedAt,) = IAggregatorV3(priceFeed).latestRoundData();
+            require(int192(answer) >= minAnswer && int192(answer) <= maxAnswer);
+            return uint256(int256(answer));
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).not.toContain("CL-DF-007");
+  });
+
+  it("detects VRF redraw pattern that enables result discarding (CL-VRF-004)", async () => {
+    const dir = await fixture({
+      "NFTRaffle.sol": `
+        contract NFTRaffle is VRFConsumerBaseV2 {
+          uint256 public currentChainlinkRequestId;
+          uint256 public drawTimelock;
+
+          function startDraw() external onlyOwner {
+            currentChainlinkRequestId = coordinator.requestRandomWords(keyHash, subId, 3, 100000, 1);
+            drawTimelock = block.timestamp + drawBufferTime;
+          }
+
+          function redraw() external onlyOwner {
+            if (drawTimelock >= block.timestamp) revert STILL_IN_WAITING_PERIOD();
+            currentChainlinkRequestId = coordinator.requestRandomWords(keyHash, subId, 3, 100000, 1);
+            drawTimelock = block.timestamp + drawBufferTime;
+          }
+
+          function fulfillRandomWords(uint256 requestId, uint256[] memory words) internal override {
+            if (requestId != currentChainlinkRequestId) revert REQUEST_DOES_NOT_MATCH_CURRENT_ID();
+            winner = words[0] % totalEntries;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.products).toContain("vrf");
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-VRF-004");
+  });
+
+  it("does not flag VRF consumer with no redraw mechanism (CL-VRF-004)", async () => {
+    const dir = await fixture({
+      "Lottery.sol": `
+        contract Lottery is VRFConsumerBaseV2 {
+          uint256 public s_requestId;
+
+          function requestRandom() external {
+            s_requestId = coordinator.requestRandomWords(keyHash, subId, 3, 100000, 1);
+          }
+
+          function fulfillRandomWords(uint256 requestId, uint256[] memory words) internal override {
+            if (requestId != s_requestId) revert UnknownRequest();
+            winner = words[0] % totalEntries;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).not.toContain("CL-VRF-004");
+  });
+
   it("detects Functions/CRE leads", async () => {
     const dir = await fixture({
       ".chainlink-audit.json": JSON.stringify({
@@ -724,6 +943,150 @@ describe("scanPath", () => {
     expect(result.findings.map((finding) => finding.ruleId)).toEqual(
       expect.arrayContaining(["CL-FN-001", "CL-FN-002"]),
     );
+  });
+
+  it("detects missing Functions error handling (CL-FN-003)", async () => {
+    const dir = await fixture({
+      ".chainlink-audit.json": JSON.stringify({ exclude: [], format: "text", minSeverity: "info" }),
+      "SimpleConsumer.sol": `
+        contract SimpleConsumer is FunctionsClient {
+          function send() external {
+            sendRequest(sourceCode, new string[](0), new bytes[](0), subscriptionId, 100000);
+          }
+          function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory) internal override {
+            latestResponse = response;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-FN-003");
+  });
+
+  it("detects Data Streams report used without on-chain verification (CL-DS-001)", async () => {
+    const dir = await fixture({
+      "StreamsConsumer.sol": `
+        contract StreamsConsumer is ILogAutomation {
+          function performUpkeep(bytes calldata performData) external {
+            (bytes[] memory signedReports,) = abi.decode(performData, (bytes[], bytes));
+            bytes memory unverifiedReport = signedReports[0];
+            BasicReport memory report = abi.decode(unverifiedReport, (BasicReport));
+            latestPrice = report.price;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.products).toContain("data-streams");
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-DS-001");
+  });
+
+  it("does not flag Data Streams report when verifier.verify() is called (CL-DS-001)", async () => {
+    const dir = await fixture({
+      "SafeStreamsConsumer.sol": `
+        contract SafeStreamsConsumer is ILogAutomation {
+          IVerifierProxy public verifier;
+          function performUpkeep(bytes calldata performData) external {
+            (bytes[] memory signedReports,) = abi.decode(performData, (bytes[], bytes));
+            bytes memory verifiedReport = verifier.verify(signedReports[0], abi.encode(feeAddress));
+            BasicReport memory report = abi.decode(verifiedReport, (BasicReport));
+            latestPrice = report.price;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).not.toContain("CL-DS-001");
+  });
+
+  it("detects Data Streams price used without timestamp validation (CL-DS-002)", async () => {
+    const dir = await fixture({
+      "UncheckedStreams.sol": `
+        contract UncheckedStreams {
+          IVerifierProxy public verifier;
+          function getPrice(bytes memory rawReport) external returns (int192) {
+            bytes memory verifiedReport = verifier.verify(rawReport, abi.encode(feeAddress));
+            BasicReport memory report = abi.decode(verifiedReport, (BasicReport));
+            return report.price;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-DS-002");
+  });
+
+  it("does not flag Data Streams when validFromTimestamp is checked (CL-DS-002)", async () => {
+    const dir = await fixture({
+      "FreshStreams.sol": `
+        contract FreshStreams {
+          IVerifierProxy public verifier;
+          uint32 public constant MAX_AGE = 60;
+          function getPrice(bytes memory rawReport) external returns (int192) {
+            bytes memory verifiedReport = verifier.verify(rawReport, abi.encode(feeAddress));
+            BasicReport memory report = abi.decode(verifiedReport, (BasicReport));
+            require(block.timestamp - report.validFromTimestamp <= MAX_AGE, "Stale report");
+            require(block.timestamp <= report.expiresAt, "Expired report");
+            return report.price;
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).not.toContain("CL-DS-002");
+  });
+
+  it("detects bid/ask used in execution context instead of benchmark price (CL-DS-003)", async () => {
+    const dir = await fixture({
+      "BidAskExecution.sol": `
+        contract BidAskExecution {
+          IVerifierProxy public verifier;
+          function executeTrade(bytes memory rawReport, uint256 amount) external {
+            bytes memory verified = verifier.verify(rawReport, abi.encode(feeAddress));
+            BasicReport memory report = abi.decode(verified, (BasicReport));
+            require(block.timestamp <= report.expiresAt);
+            uint256 cost = uint256(int256(report.bid)) * amount / 1e18;
+            token.transfer(msg.sender, cost);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).toContain("CL-DS-003");
+  });
+
+  it("does not flag bid/ask when report.price is also used (spread logic) (CL-DS-003)", async () => {
+    const dir = await fixture({
+      "SpreadCheck.sol": `
+        contract SpreadCheck {
+          IVerifierProxy public verifier;
+          function executeTrade(bytes memory rawReport, uint256 amount, bool isBuy) external {
+            bytes memory verified = verifier.verify(rawReport, abi.encode(feeAddress));
+            BasicReport memory report = abi.decode(verified, (BasicReport));
+            int192 executionPrice = isBuy ? report.ask : report.bid;
+            int192 midPrice = report.price;
+            require(executionPrice <= midPrice * 1005 / 1000, "Excessive spread");
+            token.transfer(msg.sender, amount);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings.map((f) => f.ruleId)).not.toContain("CL-DS-003");
   });
 });
 

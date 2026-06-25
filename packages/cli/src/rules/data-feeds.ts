@@ -1,5 +1,5 @@
 import type { Rule } from "../types.js";
-import { firstLineMatching, hasAny, makeFinding } from "./helpers.js";
+import { extractBlockBody, firstLineMatching, hasAny, isInterfaceOnlyFile, makeFinding } from "./helpers.js";
 
 const AGGREGATOR_WRAPPER_PATTERN =
   /function\s+latestRoundData\s*\([^)]*\)\s*(?:external|public|view|override|virtual|\s)*returns\s*\(\s*uint80\s*,\s*int256\s*,\s*uint256\s*,\s*uint256\s*,\s*uint80\s*\)\s*\{/s;
@@ -132,6 +132,98 @@ export const dataFeedRules: Rule[] = [
           description: "Potential issue: L2 sequencer downtime can make recent-looking price data unsafe immediately after recovery.",
           risk: "Protocols may execute using stale or unfair prices around sequencer outages.",
           recommendation: "For L2 deployments, check the Chainlink Sequencer Uptime Feed and enforce a post-recovery grace period.",
+        }),
+      ];
+    },
+  },
+  {
+    metadata: {
+      ruleId: "CL-DF-005",
+      product: "data-feeds",
+      severity: "medium",
+      title: "Deprecated Chainlink latestAnswer() usage",
+      description: "latestAnswer() is deprecated and does not expose updatedAt, roundId, or answeredInRound.",
+    },
+    scan(context) {
+      if (!/\.latestAnswer\s*\(/.test(context.content)) return [];
+      if (isAggregatorWrapper(context.content)) return [];
+      if (isInterfaceOnlyFile(context.content)) return [];
+      return [
+        makeFinding({
+          context,
+          ruleId: this.metadata.ruleId,
+          severity: this.metadata.severity,
+          confidence: "high",
+          line: firstLineMatching(context.lines, /\.latestAnswer\s*\(/),
+          title: this.metadata.title,
+          description: "Potential issue: latestAnswer() provides no round metadata, making freshness, completeness, and validity checks impossible.",
+          risk: "Stale or invalid oracle answers are accepted silently — no way to check updatedAt, answeredInRound, or roundId.",
+          recommendation: "Replace latestAnswer() with latestRoundData() and validate updatedAt, answeredInRound >= roundId, and answer > 0.",
+        }),
+      ];
+    },
+  },
+  {
+    metadata: {
+      ruleId: "CL-DF-006",
+      product: "data-feeds",
+      severity: "low",
+      title: "Potential missing answeredInRound completeness check",
+      description: "latestRoundData() appears to be used without validating answeredInRound >= roundId.",
+    },
+    scan(context) {
+      if (!/\.latestRoundData\s*\(/.test(context.content)) return [];
+      if (isAggregatorWrapper(context.content)) return [];
+      const hasRoundCompletenessCheck =
+        /(answeredInRound\s*>=?\s*roundId|answeredInRound\s*==\s*roundId|roundId\s*<=?\s*answeredInRound|roundId\s*==\s*answeredInRound)/i.test(
+          context.content,
+        );
+      if (hasRoundCompletenessCheck) return [];
+      return [
+        makeFinding({
+          context,
+          ruleId: this.metadata.ruleId,
+          severity: this.metadata.severity,
+          confidence: "low",
+          line: firstLineMatching(context.lines, /\.latestRoundData\s*\(/),
+          title: this.metadata.title,
+          description: "Potential issue: an incomplete round where answeredInRound < roundId indicates the aggregator has not finalized the answer.",
+          risk: "Accepting answers from incomplete rounds can introduce a stale or unfinalized price into protocol state.",
+          recommendation: "Require answeredInRound >= roundId after calling latestRoundData() to confirm the round is finalized.",
+        }),
+      ];
+    },
+  },
+  {
+    metadata: {
+      ruleId: "CL-DF-007",
+      product: "data-feeds",
+      severity: "medium",
+      title: "Potential cached Chainlink aggregator bounds",
+      description: "minAnswer or maxAnswer appear to be read from the aggregator and stored, which may become stale after a proxy upgrade.",
+    },
+    scan(context) {
+      if (!/(IAccessControlledOffchainAggregator|AccessControlledOffchainAggregator)/.test(context.content)) return [];
+      if (!/(\.minAnswer\s*\(|\.maxAnswer\s*\()/.test(context.content)) return [];
+      if (isAggregatorWrapper(context.content)) return [];
+      if (isInterfaceOnlyFile(context.content)) return [];
+      // Only flag when bounds are assigned inside a constructor — the vulnerability is specifically
+      // about caching one-time at deployment, not about reading bounds dynamically in view functions.
+      const constructorBody = extractBlockBody(context.content, /\bconstructor\s*\(/);
+      if (!constructorBody) return [];
+      const storesBounds = /(=\s*[\w.]+\.minAnswer\s*\(|=\s*[\w.]+\.maxAnswer\s*\()/.test(constructorBody);
+      if (!storesBounds) return [];
+      return [
+        makeFinding({
+          context,
+          ruleId: this.metadata.ruleId,
+          severity: this.metadata.severity,
+          confidence: "low",
+          line: firstLineMatching(context.lines, /\.minAnswer\s*\(|\.maxAnswer\s*\(/),
+          title: this.metadata.title,
+          description: "Potential issue: Chainlink proxy owners can upgrade the underlying aggregator; cached minAnswer/maxAnswer from the old aggregator become stale bounds.",
+          risk: "After a Chainlink aggregator migration, price validation can revert or accept values outside the new aggregator's bounds, disrupting pricing and liquidations.",
+          recommendation: "Read minAnswer/maxAnswer from the current aggregator during pricing, or add a guarded refresh path that updates cached bounds before they are used.",
         }),
       ];
     },

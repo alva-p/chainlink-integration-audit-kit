@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.4.0 - 2026-06-25
+
+**7 new rules** derived from real audit findings (solodit-vault), a new benchmark
+round against 3 production CCIP repos, and a false-positive fix discovered during
+live scanning of the Aave GHO CCIP bridge.
+
+### New rules
+
+- **CL-DF-005** (medium): Deprecated `latestAnswer()` usage — does not expose
+  `updatedAt`, `roundId`, or `answeredInRound`; backed by 3 real audit findings
+  (Juicebox HIGH, Connext MEDIUM, Tigris MEDIUM).
+- **CL-DF-006** (low): Missing `answeredInRound >= roundId` round-completeness
+  check on `latestRoundData()` calls.
+- **CL-DF-007** (medium): Chainlink aggregator `minAnswer`/`maxAnswer` bounds
+  cached in the constructor — become stale after a proxy aggregator upgrade.
+  Backed by Isomorph MEDIUM finding.
+- **CL-VRF-004** (high): VRF redraw mechanism that overwrites `currentChainlinkRequestId`
+  while a fulfillment is pending — enables selective result discarding by
+  underfunding the LINK subscription. Backed by Forgeries HIGH finding.
+- **CL-DS-001** (high): Data Streams report decoded or used without a visible
+  `verifier.verify()` call.
+- **CL-DS-002** (medium): Data Streams report price fields used without checking
+  `validFromTimestamp` / `expiresAt` against `block.timestamp`.
+- **CL-DS-003** (low): `report.bid` or `report.ask` used in an execution context
+  without `report.price` — Chainlink recommends the benchmark mid-price for most
+  execution logic.
+
+### False-positive fix
+
+- **CL-CCIP-001/002**: `delegatedCcipContent` now also follows `this.X(message)`
+  self-delegation calls (e.g. `try this.processMessage(message) {} catch { ... }`).
+  Previously the Aave GHO CCIP bridge (`AaveGhoCcipBridge.sol`) produced two
+  spurious HIGH leads because `processMessage` — which validates both
+  `sourceChainSelector` and `message.sender` — was called as an external
+  `this.` call rather than a library delegation.
+
+### Scanner improvements
+
+- `latestAnswer()` calls now trigger `data-feeds` product detection.
+- Data Streams product detection broadened to cover custom verifier wrappers
+  (`IChainlinkDataStreamVerifier`, `DataStreamProvider`, `DataStreamVerifier`)
+  and custom Report structs with the `feedId + expiresAt + bid/ask` field triad.
+
+### Benchmark additions
+
+Three new CCIP-focused repositories added to `benchmarks/ecosystem-repos.json`:
+- `aave-dao/aave-helpers` (`src/bridges/ccip`) — Aave GHO CCIP bridge, audited
+- `threshold-network/tbtc-v2` (`cross-chain/bob`) — tBTC Token Pool (LockRelease + BurnFromMint)
+- `lombard-finance/evm-smart-contracts` (`contracts/bridge`) — LBTC BridgeTokenPool ($1B+ in BTC assets)
+
 ## 0.3.3 - 2026-06-14
 
 Rule accuracy improvements driven by a 58-repository Chainlink Ecosystem

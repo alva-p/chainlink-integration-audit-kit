@@ -570,6 +570,33 @@
       "scanPath": ".",
       "ecosystemProducts": [],
       "notes": "Additional 50-project Ecosystem benchmark batch; page and Git HEAD verified on 2026-06-14."
+    },
+    {
+      "project": "Aave GHO CCIP Bridge",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/aave",
+      "githubUrl": "https://github.com/aave-dao/aave-helpers.git",
+      "commit": "b081b0eb3b0d7ec8b390e7d2b1252d1b9a061c24",
+      "scanPath": "src/bridges/ccip",
+      "ecosystemProducts": ["ccip"],
+      "notes": "Aave GHO cross-chain bridge via Chainlink CCIP. Has AaveGhoCcipBridge.sol (CCIPReceiver) and a separate CCIPReceiver base. Audited by FYEO. Focused scan path targets only the bridge code."
+    },
+    {
+      "project": "tBTC v2 BOB Token Pool",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/threshold-network",
+      "githubUrl": "https://github.com/threshold-network/tbtc-v2.git",
+      "commit": "0eddc8f712cecfb164e071301ab74fb256c07cf4",
+      "scanPath": "cross-chain/bob",
+      "ecosystemProducts": ["ccip"],
+      "notes": "Threshold Network tBTC bridge to BOB chain via Chainlink CCIP. Has LockReleaseTokenPoolUpgradeable.sol and BurnFromMintTokenPoolUpgradeable.sol — real production Token Pool implementations for exercise of CL-CCIP-008/009/010 rules."
+    },
+    {
+      "project": "Lombard Finance LBTC Bridge",
+      "ecosystemUrl": "https://www.chainlinkecosystem.com/ecosystem/lombard",
+      "githubUrl": "https://github.com/lombard-finance/evm-smart-contracts.git",
+      "commit": "b3f27c607ab7a558414fe31e5fe3569a7e76f3fb",
+      "scanPath": "contracts/bridge",
+      "ecosystemProducts": ["ccip"],
+      "notes": "Lombard Finance LBTC cross-chain bridge migrated to Chainlink CCIP ($1B+ in BTC assets). Has BridgeTokenPool.sol inheriting from TokenPool. Ecosystem page explicitly lists CCIP. Scan path targets only bridge contracts."
     }
   ]
 }
