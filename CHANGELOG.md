@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.6.0 - 2026-07-02
+
+Registry-verified checks: rules that compare hardcoded values against Chainlink's
+official registries instead of code patterns — ground truth, not heuristics.
+
+### Registry snapshot
+
+- New `scripts/update-registry.ts` (`npm run update-registry`) distills Chainlink's
+  reference data directory (the same source the official docs use) and the
+  `smartcontractkit/chain-selectors` repository into a pinned
+  `src/registry/data.ts`: 1,583 feeds across 14 chains (address, name, decimals,
+  heartbeat, feed category) and 269 official CCIP chain selectors (kept as
+  strings — selector values exceed 2^53).
+
+### New rules
+
+- **CL-DF-008** (medium): hardcoded aggregator address not found in the official
+  feed registry — mistyped, retired, or third-party.
+- **CL-DF-009** (high): code scales prices with an 8-decimal assumption but the
+  registry says the feed has different decimals (e.g. BTC/ETH is 18).
+- **CL-DF-010** (high, high confidence): feed address is flagged `deprecating`
+  or `hidden` in the official registry — it will stop updating.
+- **CL-CCIP-011** (high): numeric literal used in a chain-selector context that
+  matches no official CCIP chain selector — typo'd selectors silently break
+  allowlists.
+
+### Validation
+
+Scanned against the 60-repo ecosystem benchmark: 11 total leads (0 from
+CL-CCIP-011 and CL-DF-010 — no noise), including a genuinely retired DIGG/BTC
+feed still referenced by Badger/Midas oracle code.
+
 ## 0.5.0 - 2026-07-02
 
 Continuous-control release: everything needed to keep the scanner installed in CI

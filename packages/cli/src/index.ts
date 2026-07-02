@@ -22,7 +22,7 @@ import { rules } from "./rules/index.js";
 import { scanPath } from "./scanner.js";
 import type { OutputFormat, ScanResult } from "./types.js";
 
-const version = "0.5.0";
+const version = "0.6.0";
 
 function changedSolidityFiles(ref: string): Set<string> {
   const gitRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();

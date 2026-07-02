@@ -63,11 +63,23 @@ Copy it into your repo's `.claude/agents/` and ask Claude Code: *"verify the cha
 
 | Product | Rules | Examples |
 |---|---|---|
-| **CCIP** | 10 | Missing source chain / sender / router validation, unsafe payload decoding, Token Pool validator bypass |
-| **Data Feeds** | 4 | Stale price, missing validity checks, hardcoded addresses |
-| **VRF** | 3 | Untracked requests, missing fulfillment guard, weak randomness use |
+| **CCIP** | 11 | Missing source chain / sender / router validation, unsafe payload decoding, Token Pool validator bypass, unknown chain selector |
+| **Data Feeds** | 10 | Stale price, missing validity checks, deprecated `latestAnswer()`, registry-verified addresses/decimals/deprecation |
+| **Data Streams** | 3 | Missing report verification, missing timestamp validation |
+| **VRF** | 4 | Untracked requests, missing fulfillment guard, weak randomness use |
 | **Automation** | 3 | Missing `performUpkeep` revalidation, selector mismatch |
-| **Functions/CRE** | 2 | Hardcoded secrets, inline source assumptions |
+| **Functions/CRE** | 3 | Hardcoded secrets, inline source assumptions |
+
+### Registry-verified checks
+
+Four rules validate hardcoded values against **Chainlink's official registries** (reference data directory + `chain-selectors`), pinned at build time — 1,500+ feeds across 14 chains and all official CCIP chain selectors:
+
+- **CL-DF-008** — hardcoded aggregator address not found in the official feed registry (mistyped, retired, or third-party)
+- **CL-DF-009** — code scales with an 8-decimal assumption but the registry says the feed has different decimals
+- **CL-DF-010** — feed is flagged `deprecating` in the registry and will stop updating
+- **CL-CCIP-011** — hardcoded chain selector doesn't match any official CCIP selector
+
+These checks compare against ground truth rather than code patterns, so they can produce concrete, verifiable findings. Refresh the snapshot with `npm -w packages/cli run update-registry`.
 
 ## Example Output
 

@@ -1,6 +1,6 @@
 {
   "name": "chainlink-audit",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Security review CLI for flagging unverified Chainlink integration risk leads in Solidity repositories.",
   "license": "MIT",
   "type": "module",
@@ -42,7 +42,8 @@
     "test": "vitest run",
     "dev": "tsx src/index.ts",
     "benchmark:ecosystem": "tsx scripts/benchmark-ecosystem.ts",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "update-registry": "tsx scripts/update-registry.ts"
   },
   "dependencies": {
     "commander": "^12.1.0"

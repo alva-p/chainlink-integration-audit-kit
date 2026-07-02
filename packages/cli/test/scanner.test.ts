@@ -12,6 +12,7 @@ import { renderText } from "../src/reporters/text.js";
 import { renderTriageMarkdown } from "../src/reporters/triage.js";
 import { rules } from "../src/rules/index.js";
 import { writeBaseline } from "../src/baseline.js";
+import { ccipSelectors, feeds } from "../src/registry/data.js";
 import { scanPath } from "../src/scanner.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1238,5 +1239,81 @@ describe("suppressions", () => {
 
     const unfiltered = await scanPath(dir, { applyBaseline: false });
     expect(unfiltered.findings.length).toBe(before.findings.length);
+  });
+});
+
+describe("registry checks", () => {
+  const knownFeeds = Object.entries(feeds);
+  const goodFeed = knownFeeds.find(([, info]) => info.decimals === 8 && info.category !== "deprecating" && info.category !== "hidden");
+  const nonEightDecimalsFeed = knownFeeds.find(([, info]) => info.decimals !== 8 && info.category !== "deprecating" && info.category !== "hidden");
+  const deprecatingFeed = knownFeeds.find(([, info]) => info.category === "deprecating");
+  const validSelector = Object.keys(ccipSelectors)[0];
+
+  function feedContract(address: string, scaling = ""): string {
+    return `
+        contract Consumer {
+          AggregatorV3Interface public feed = AggregatorV3Interface(${address});
+          function read() external view returns (uint256) {
+            (, int256 answer,, uint256 updatedAt,) = feed.latestRoundData();
+            require(answer > 0 && updatedAt != 0 && block.timestamp - updatedAt < maxStaleness, "stale");
+            ${scaling}
+            return uint256(answer);
+          }
+        }
+      `;
+  }
+
+  it("flags a hardcoded aggregator address missing from the official registry (CL-DF-008)", async () => {
+    const dir = await fixture({ "Consumer.sol": feedContract("0x1111111111111111111111111111111111111111") });
+    const ruleIds = (await scanPath(dir)).findings.map((finding) => finding.ruleId);
+    expect(ruleIds).toContain("CL-DF-008");
+  });
+
+  it("does not flag a registry-listed feed address (CL-DF-008)", async () => {
+    expect(goodFeed).toBeDefined();
+    const dir = await fixture({ "Consumer.sol": feedContract(goodFeed![0]) });
+    const ruleIds = (await scanPath(dir)).findings.map((finding) => finding.ruleId);
+    expect(ruleIds).not.toContain("CL-DF-008");
+  });
+
+  it("flags 8-decimal scaling against a non-8-decimal feed (CL-DF-009)", async () => {
+    expect(nonEightDecimalsFeed).toBeDefined();
+    const dir = await fixture({
+      "Consumer.sol": feedContract(nonEightDecimalsFeed![0], "uint256 scaled = uint256(answer) * 1e10;"),
+    });
+    const ruleIds = (await scanPath(dir)).findings.map((finding) => finding.ruleId);
+    expect(ruleIds).toContain("CL-DF-009");
+  });
+
+  it("does not flag 8-decimal scaling against an 8-decimal feed (CL-DF-009)", async () => {
+    expect(goodFeed).toBeDefined();
+    const dir = await fixture({
+      "Consumer.sol": feedContract(goodFeed![0], "uint256 scaled = uint256(answer) * 1e10;"),
+    });
+    const ruleIds = (await scanPath(dir)).findings.map((finding) => finding.ruleId);
+    expect(ruleIds).not.toContain("CL-DF-009");
+  });
+
+  it("flags a feed marked deprecating in the registry (CL-DF-010)", async () => {
+    expect(deprecatingFeed).toBeDefined();
+    const dir = await fixture({ "Consumer.sol": feedContract(deprecatingFeed![0]) });
+    const findings = (await scanPath(dir)).findings.filter((finding) => finding.ruleId === "CL-DF-010");
+    expect(findings).toHaveLength(1);
+    expect(findings[0].confidence).toBe("high");
+  });
+
+  it("flags an unknown hardcoded CCIP chain selector and accepts official ones (CL-CCIP-011)", async () => {
+    const dir = await fixture({
+      "Sender.sol": `
+        contract Sender {
+          uint64 public constant DEST_CHAIN_SELECTOR = 1234567890123456789;
+          uint64 public constant OK_CHAIN_SELECTOR = ${validSelector};
+          function send(uint64 destinationChainSelector) external {}
+        }
+      `,
+    });
+    const findings = (await scanPath(dir)).findings.filter((finding) => finding.ruleId === "CL-CCIP-011");
+    expect(findings).toHaveLength(1);
+    expect(findings[0].description).toContain("1234567890123456789");
   });
 });
