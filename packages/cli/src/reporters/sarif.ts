@@ -81,6 +81,9 @@ export function renderSarif(result: ScanResult): string {
             message: {
               text: resultMessage(finding),
             },
+            partialFingerprints: finding.fingerprint
+              ? { chainlinkAuditFingerprint: finding.fingerprint }
+              : undefined,
             locations: [
               {
                 physicalLocation: {

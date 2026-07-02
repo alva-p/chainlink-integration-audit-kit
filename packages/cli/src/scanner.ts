@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { loadBaseline, makeFingerprint } from "./baseline.js";
 import { defaultConfig, loadConfig, severityRank } from "./config.js";
 import { rules } from "./rules/index.js";
 import type { AuditConfig, ChainlinkProduct, Finding, RepoSignals, ScanOptions, ScanResult } from "./types.js";
@@ -117,6 +118,20 @@ function detectL2Target(files: Array<{ file: string; content: string }>): boolea
   return /(\barbitrum\b|\boptimism\b|\bbase\b|\bpolygon\b|\bzksync\b|\bscroll\b|\blinea\b|\bmantle\b|\bblast\b|sepolia.*\bbase\b|\bl2\b)/i.test(combined);
 }
 
+// `// chainlink-audit-ignore` suppresses every rule on that line; adding rule IDs
+// (`// chainlink-audit-ignore: CL-CCIP-004 -- reason`) suppresses only those rules.
+// Valid on the finding's own line or the line directly above it.
+function isInlineSuppressed(lines: string[], finding: Finding): boolean {
+  for (const candidate of [lines[finding.line - 1], lines[finding.line - 2]]) {
+    if (!candidate) continue;
+    const match = /chainlink-audit-ignore\b(.*)/.exec(candidate);
+    if (!match) continue;
+    const ruleIds = match[1].match(/CL-[A-Z]+-\d{3}/g);
+    if (!ruleIds || ruleIds.includes(finding.ruleId)) return true;
+  }
+  return false;
+}
+
 export async function scanPath(targetPath: string, options: ScanOptions = {}): Promise<ScanResult> {
   const absoluteTarget = path.resolve(targetPath);
   const config = options.config ?? await loadConfig(absoluteTarget);
@@ -135,11 +150,26 @@ export async function scanPath(targetPath: string, options: ScanOptions = {}): P
     files,
   };
 
+  const baseline = (options.applyBaseline ?? true) ? await loadBaseline(scanRoot) : null;
+
   const findings: Finding[] = [];
+  let inlineSuppressed = 0;
+  let baselineSuppressed = 0;
   for (const file of files) {
     const lines = file.content.split(/\r?\n/);
     for (const rule of rules) {
-      findings.push(...rule.scan({ file: file.file, content: file.content, lines, repoSignals }));
+      for (const finding of rule.scan({ file: file.file, content: file.content, lines, repoSignals })) {
+        finding.fingerprint = makeFingerprint(finding, lines, finding.line);
+        if (isInlineSuppressed(lines, finding)) {
+          inlineSuppressed++;
+          continue;
+        }
+        if (baseline?.has(finding.fingerprint)) {
+          baselineSuppressed++;
+          continue;
+        }
+        findings.push(finding);
+      }
     }
   }
 
@@ -158,5 +188,6 @@ export async function scanPath(targetPath: string, options: ScanOptions = {}): P
     products: [...repoSignals.products].sort(),
     findings: filteredFindings,
     config,
+    suppressed: { inline: inlineSuppressed, baseline: baselineSuppressed },
   };
 }

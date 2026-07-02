@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.5.0 - 2026-07-02
+
+Continuous-control release: everything needed to keep the scanner installed in CI
+instead of running it once.
+
+### Baseline
+
+- New `chainlink-audit baseline <path>` command records current findings in
+  `.chainlink-audit-baseline.json`; subsequent scans only report **new** leads.
+  Fingerprints anchor on rule + file + flagged line *content*, so unrelated edits
+  that shift line numbers don't invalidate the baseline.
+- `scan --no-baseline` bypasses the baseline for a full report.
+
+### Inline suppressions
+
+- `// chainlink-audit-ignore` (all rules) and
+  `// chainlink-audit-ignore: CL-XXX-NNN -- reason` (listed rules only), valid on
+  the flagged line or the line above. Suppressed counts are reported in the text
+  output and JSON (`suppressed.inline` / `suppressed.baseline`).
+
+### CI integration
+
+- `scan --fail-on <severity>` exits 1 when any reported finding is at or above the
+  given severity.
+- `scan --changed-since <ref>` limits reported findings to `.sol` files changed
+  since a git ref (diff + untracked).
+- New composite GitHub Action (`action.yml` at repo root) that installs the CLI,
+  scans, and emits SARIF for `github/codeql-action/upload-sarif`.
+- SARIF results now carry `partialFingerprints` so GitHub code scanning deduplicates
+  alerts across pushes.
+
+### Agent verification layer
+
+- New `.claude/agents/chainlink-verify.md` Claude Code agent: reads a JSON scan
+  report, resolves each lead's cross-file context (parent contracts, inherited
+  modifiers, delegated helpers), runs Refutation → Reachability → Trigger → Impact
+  gates, and emits a verified triage (`CONFIRMED` / `FALSE POSITIVE` /
+  `NEEDS-CONTEXT`) with ready-to-paste suppression comments.
+
 ## 0.4.0 - 2026-06-25
 
 **7 new rules** derived from real audit findings (solodit-vault), a new benchmark

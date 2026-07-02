@@ -11,6 +11,7 @@ import { renderSarif } from "../src/reporters/sarif.js";
 import { renderText } from "../src/reporters/text.js";
 import { renderTriageMarkdown } from "../src/reporters/triage.js";
 import { rules } from "../src/rules/index.js";
+import { writeBaseline } from "../src/baseline.js";
 import { scanPath } from "../src/scanner.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1147,5 +1148,95 @@ describe("reporters", () => {
     const reportPath = path.join(dir, "report.md");
     await writeFile(reportPath, markdown);
     await expect(readFile(reportPath, "utf8")).resolves.toContain("CL-DF-001");
+  });
+});
+
+describe("suppressions", () => {
+  const feedWithLead = `
+        contract Feed {
+          function read() external view returns (uint256) {
+            (, int256 answer,,,) = feed.latestRoundData();
+            return uint256(answer);
+          }
+        }
+      `;
+
+  it("suppresses all rules on a line with a bare chainlink-audit-ignore comment", async () => {
+    const dir = await fixture({
+      "Feed.sol": `
+        contract Feed {
+          function read() external view returns (uint256) {
+            // chainlink-audit-ignore -- wrapper validates upstream
+            (, int256 answer,,,) = feed.latestRoundData();
+            return uint256(answer);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+
+    expect(result.findings).toHaveLength(0);
+    expect(result.suppressed.inline).toBeGreaterThan(0);
+  });
+
+  it("suppresses only the listed rule IDs", async () => {
+    const dir = await fixture({
+      "Feed.sol": `
+        contract Feed {
+          function read() external view returns (uint256) {
+            // chainlink-audit-ignore: CL-DF-001 -- freshness handled by caller
+            (, int256 answer,,,) = feed.latestRoundData();
+            return uint256(answer);
+          }
+        }
+      `,
+    });
+
+    const result = await scanPath(dir);
+    const ruleIds = result.findings.map((finding) => finding.ruleId);
+
+    expect(ruleIds).not.toContain("CL-DF-001");
+    expect(ruleIds).toContain("CL-DF-002");
+    expect(result.suppressed.inline).toBe(1);
+  });
+
+  it("baselines existing findings and only reports new ones", async () => {
+    const dir = await fixture({ "Feed.sol": feedWithLead });
+
+    const before = await scanPath(dir);
+    expect(before.findings.length).toBeGreaterThan(0);
+    await writeBaseline(dir, before.findings);
+
+    const after = await scanPath(dir);
+    expect(after.findings).toHaveLength(0);
+    expect(after.suppressed.baseline).toBe(before.findings.length);
+
+    // A new lead in a new file is not covered by the baseline.
+    await writeFile(path.join(dir, "NewFeed.sol"), feedWithLead.replace("contract Feed", "contract NewFeed"));
+    const withNewFile = await scanPath(dir);
+    expect(withNewFile.findings.length).toBeGreaterThan(0);
+    expect(withNewFile.findings.every((finding) => finding.file.endsWith("NewFeed.sol"))).toBe(true);
+  });
+
+  it("survives line shifts because fingerprints anchor on line content", async () => {
+    const dir = await fixture({ "Feed.sol": feedWithLead });
+    const before = await scanPath(dir);
+    await writeBaseline(dir, before.findings);
+
+    await writeFile(path.join(dir, "Feed.sol"), `// SPDX-License-Identifier: MIT\n// shifted by two lines\n${feedWithLead}`);
+    const after = await scanPath(dir);
+
+    expect(after.findings).toHaveLength(0);
+    expect(after.suppressed.baseline).toBe(before.findings.length);
+  });
+
+  it("skips the baseline when applyBaseline is false", async () => {
+    const dir = await fixture({ "Feed.sol": feedWithLead });
+    const before = await scanPath(dir);
+    await writeBaseline(dir, before.findings);
+
+    const unfiltered = await scanPath(dir, { applyBaseline: false });
+    expect(unfiltered.findings.length).toBe(before.findings.length);
   });
 });

@@ -10,10 +10,16 @@ export function renderText(result: ScanResult): string {
     `Minimum potential impact: ${result.config.minSeverity}`,
     `Excluded paths: ${result.config.exclude.length > 0 ? result.config.exclude.join(", ") : "none"}`,
     `Unverified leads: ${result.findings.length}`,
-  ].join("\n");
+  ];
+  if (result.suppressed && result.suppressed.inline + result.suppressed.baseline > 0) {
+    header.push(
+      `Suppressed: ${result.suppressed.inline} inline (chainlink-audit-ignore), ${result.suppressed.baseline} baselined`,
+    );
+  }
+  const headerText = header.join("\n");
 
   if (result.findings.length === 0) {
-    return `${header}\n\nNo Chainlink integration risk leads found by MVP rules. Manual review still required.`;
+    return `${headerText}\n\nNo Chainlink integration risk leads found by MVP rules. Manual review still required.`;
   }
 
   const findings = result.findings
@@ -31,5 +37,5 @@ export function renderText(result: ScanResult): string {
     )
     .join("\n\n");
 
-  return `${header}\n\n${findings}`;
+  return `${headerText}\n\n${findings}`;
 }

@@ -20,6 +20,7 @@ export interface Finding {
   risk: string;
   recommendation: string;
   manualReviewRequired: boolean;
+  fingerprint?: string;
 }
 
 export interface AuditConfig {
@@ -63,8 +64,13 @@ export interface ScanResult {
   products: ChainlinkProduct[];
   findings: Finding[];
   config: AuditConfig;
+  suppressed: {
+    inline: number;
+    baseline: number;
+  };
 }
 
 export interface ScanOptions {
   config?: AuditConfig;
+  applyBaseline?: boolean;
 }

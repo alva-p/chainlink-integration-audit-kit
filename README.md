@@ -19,10 +19,45 @@ chainlink-audit scan . --format markdown --out report.md     # markdown
 chainlink-audit scan . --format html --out report.html       # HTML report
 chainlink-audit scan . --format sarif --out report.sarif     # SARIF (CI)
 chainlink-audit scan . --min-severity medium                 # filter by severity
+chainlink-audit scan . --fail-on high                        # exit 1 on high leads (CI)
+chainlink-audit scan . --changed-since origin/main           # only changed .sol files
+chainlink-audit baseline .                                   # accept current leads
 chainlink-audit triage report.json --out triage.md          # review checklist
 chainlink-audit rules                                        # list all rules
 chainlink-audit init                                         # create config file
 ```
+
+## CI / Continuous Control
+
+Adopt the scanner on an existing repo without failing on day one:
+
+1. `chainlink-audit baseline .` records current leads in `.chainlink-audit-baseline.json` (commit it). Future scans only report **new** leads. Fingerprints anchor on line content, so unrelated edits don't invalidate the baseline.
+2. Suppress individual leads inline with a reason:
+
+```solidity
+// chainlink-audit-ignore: CL-CCIP-004 -- sender is validated in GlacisAbstractAdapter
+(address to, uint256 amount) = abi.decode(message.data, (address, uint256));
+```
+
+A bare `// chainlink-audit-ignore` suppresses all rules on that line; listing rule IDs suppresses only those. Both forms work on the flagged line or the line above.
+
+3. Gate PRs with the GitHub Action:
+
+```yaml
+- uses: alva-p/chainlink-integration-audit-kit@main
+  with:
+    fail-on: high
+- uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: chainlink-audit.sarif
+```
+
+## Verifying Leads with an Agent
+
+The scanner is regex-based and over-reports by design. [`.claude/agents/chainlink-verify.md`](.claude/agents/chainlink-verify.md) is a [Claude Code](https://claude.ai/code) agent that reads each lead's full cross-file context (parent contracts, inherited modifiers, delegated helpers) and classifies it as **CONFIRMED**, **FALSE POSITIVE** (with the refuting line), or **NEEDS-CONTEXT** — including ready-to-paste suppression comments for false positives.
+
+Copy it into your repo's `.claude/agents/` and ask Claude Code: *"verify the chainlink-audit report"*.
 
 ## What It Detects
 

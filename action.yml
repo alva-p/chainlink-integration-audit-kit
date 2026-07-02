@@ -1,0 +1,42 @@
+name: "Chainlink Audit"
+description: "Scan Solidity repositories for risky Chainlink integration patterns (Data Feeds, CCIP, VRF, Automation, Functions) and produce a SARIF report."
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  path:
+    description: "File or directory to scan"
+    default: "."
+  sarif-file:
+    description: "Where to write the SARIF report"
+    default: "chainlink-audit.sarif"
+  fail-on:
+    description: "Fail the step if any finding is at or above this severity (info, low, medium, high). Empty = never fail."
+    default: ""
+  args:
+    description: "Extra CLI arguments, e.g. --changed-since origin/main or --no-baseline"
+    default: ""
+  version:
+    description: "chainlink-audit npm version to install"
+    default: "latest"
+
+outputs:
+  sarif-file:
+    description: "Path to the generated SARIF report"
+    value: ${{ inputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install chainlink-audit
+      shell: bash
+      run: npm install -g "chainlink-audit@${{ inputs.version }}"
+    - name: Scan
+      shell: bash
+      run: |
+        FAIL_ON=""
+        if [ -n "${{ inputs.fail-on }}" ]; then
+          FAIL_ON="--fail-on ${{ inputs.fail-on }}"
+        fi
+        chainlink-audit scan "${{ inputs.path }}" --format sarif --out "${{ inputs.sarif-file }}" $FAIL_ON ${{ inputs.args }}
