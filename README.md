@@ -134,6 +134,21 @@ npm -w packages/cli run benchmark:ecosystem -- --out ../../cache/ecosystem-bench
 
 The runner clones pinned commits into `cache/ecosystem-benchmark`, scans each checkout, and writes aggregate per-project and per-rule lead counts.
 
+### Precision (registry rules)
+
+Every finding is an unverified lead, but some rules are noisier than others and we
+publish it rather than hide it. Manual triage of the registry-verified rules against
+the 60-repo benchmark ([full triage](docs/benchmark-triage.md)):
+
+| Rule | Fired | Actionable | Note |
+|------|-------|-----------|------|
+| CL-DF-008 | 10 | 0 | Interface is shared with non-Chainlink oracles → **low** severity |
+| CL-DF-009 | 1 | 0 | 8-decimal factor may scale a different token → **low** confidence |
+| CL-DF-010 | 0 | — | No noise; genuinely actionable when it fires |
+| CL-CCIP-011 | 0 | — | No noise; genuinely actionable when it fires |
+
+Severities in v0.6.1 are calibrated from these measured base rates.
+
 ## Install From Source
 
 ```bash

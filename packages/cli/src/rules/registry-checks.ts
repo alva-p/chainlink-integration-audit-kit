@@ -37,7 +37,11 @@ export const registryRules: Rule[] = [
     metadata: {
       ruleId: "CL-DF-008",
       product: "data-feeds",
-      severity: "medium",
+      // Low severity by design: the AggregatorV3Interface is an ecosystem-wide standard
+      // (Frax, Curve EMA, eOracle, API3/Tellor adapters all implement it), so "address not
+      // in the Chainlink registry" is frequently a deliberate third-party oracle or a
+      // feed on an uncovered chain, not a bug. Benchmark base rate: 0/10 actionable.
+      severity: "low",
       title: "Hardcoded feed address not found in the official Chainlink registry",
       description: "A hardcoded aggregator address does not match any feed in Chainlink's reference data directory.",
     },
@@ -53,8 +57,8 @@ export const registryRules: Rule[] = [
           confidence: "low",
           line: firstLineMatching(context.lines, new RegExp(address)),
           title: this.metadata.title,
-          description: `Address ${address} is used as a price feed but is not listed in Chainlink's official registry (snapshot ${registryGeneratedAt}). It may be mistyped, deprecated, on an uncovered chain, or a custom/third-party oracle.`,
-          risk: "A wrong or retired aggregator address returns no data or stale data, breaking every consumer of this price.",
+          description: `Address ${address} is used as a price feed but is not listed in Chainlink's official registry (snapshot ${registryGeneratedAt}). Most often this is a deliberate third-party oracle (Frax, Curve EMA, eOracle, etc.) that shares the AggregatorV3Interface, a feed on a chain this tool does not cover, or a retired feed in legacy code — only occasionally a mistyped address.`,
+          risk: "If this was meant to be a live Chainlink feed, a wrong or retired aggregator address returns no data or stale data, breaking every consumer of this price.",
           recommendation: "Verify the address against https://docs.chain.link/data-feeds/price-feeds/addresses for the target chain, and prefer constructor/config injection over hardcoding.",
         }),
       );
@@ -64,9 +68,13 @@ export const registryRules: Rule[] = [
     metadata: {
       ruleId: "CL-DF-009",
       product: "data-feeds",
-      severity: "high",
-      title: "Feed decimals assumption contradicts the official registry",
-      description: "Code scales as if the feed had 8 decimals, but the registry says otherwise.",
+      // Medium, low confidence: an 8-decimal literal (1e8/1e10) elsewhere in the file is
+      // not necessarily applied to *this* feed's answer — it may scale a different token's
+      // decimals in a composite price. The rule cannot tell them apart, so it flags for
+      // review rather than asserting a bug.
+      severity: "medium",
+      title: "Possible feed decimals assumption contradicts the official registry",
+      description: "Code contains an 8-decimal scaling factor and reads a feed the registry lists with different decimals.",
     },
     scan(context) {
       if (!usesDataFeeds(context.content)) return [];
@@ -81,11 +89,11 @@ export const registryRules: Rule[] = [
             context,
             ruleId: this.metadata.ruleId,
             severity: this.metadata.severity,
-            confidence: "medium",
+            confidence: "low",
             line: firstLineMatching(context.lines, new RegExp(address)),
             title: this.metadata.title,
-            description: `This file scales prices with an 8-decimal factor, but ${address} is ${describeFeed(feed)} per the official registry (snapshot ${registryGeneratedAt}).`,
-            risk: "Normalizing with the wrong decimals misprices the asset by orders of magnitude.",
+            description: `This file uses an 8-decimal scaling factor and reads ${address}, which is ${describeFeed(feed)} per the official registry (snapshot ${registryGeneratedAt}). Confirm the 8-decimal factor is not applied to this feed's answer (it may scale a different token in a composite price).`,
+            risk: "If the 8-decimal factor is applied to this feed, normalizing with the wrong decimals misprices the asset by orders of magnitude.",
             recommendation: `Read feed.decimals() at runtime or scale for ${feed.decimals} decimals explicitly.`,
           }),
         );

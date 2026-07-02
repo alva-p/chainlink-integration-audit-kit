@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.1 - 2026-07-02
+
+Severity recalibration from a full manual triage of the registry rules against the
+60-repo ecosystem benchmark ([docs/benchmark-triage.md](docs/benchmark-triage.md)):
+11 findings, 0 reportable — all legacy references to retired feeds or deliberate
+third-party oracles sharing the `AggregatorV3Interface`.
+
+- **CL-DF-008**: medium → **low** severity. "Address not in the registry" is usually
+  a third-party oracle (Frax, Curve EMA, eOracle) or a retired feed in legacy code,
+  not a bug. Description rewritten to lead with the benign causes.
+- **CL-DF-009**: high → **medium** severity, confidence medium → **low**. An
+  8-decimal literal elsewhere in the file may scale a different token in a composite
+  price; the rule now asks the reviewer to confirm rather than asserting a mispricing.
+- **CL-DF-010** / **CL-CCIP-011**: unchanged (zero benchmark noise, genuinely
+  actionable when they fire).
+- Published a per-rule precision table in the README.
+
 ## 0.6.0 - 2026-07-02
 
 Registry-verified checks: rules that compare hardcoded values against Chainlink's
